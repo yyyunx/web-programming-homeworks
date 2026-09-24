@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskMaster - 高效質感代辦清單</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 9999px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        /* Toast animation */
+        @keyframes slideIn {
+            from { transform: translateY(100%) opacity: 0; }
+            to { transform: translateY(0) opacity: 1; }
+        }
+        .toast-animate {
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- Header Section -->
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold flex items-center gap-3 text-slate-900 dark:text-white">
+                    <span class="p-2 bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/30">
+                        <i class="fa-solid font-bold fa-check-double"></i>
+                    </span>
+                    TaskMaster
+                </h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">智慧管理您的每日任務與目標</p>
+            </div>
+
+            <!-- Top Utility Bar -->
+            <div class="flex items-center gap-2 self-end sm:self-auto">
+                <button id="themeToggleBtn" title="切換主題" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i id="themeIcon" class="fa-solid fa-moon text-lg"></i>
+                </button>
+                <button id="exportBtn" title="匯出 JSON 備份" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-download text-lg"></i>
+                </button>
+                <label id="importLabel" title="匯入 JSON 備份" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">
+                    <i class="fa-solid fa-upload text-lg"></i>
+                    <input type="file" id="importInput" accept=".json" class="hidden">
+                </label>
+            </div>
+        </header>
+
+        <!-- Progress & Statistics Overview -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-700/80 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">完成進度總覽</h2>
+                    <span id="statsText" class="text-xs text-slate-500 dark:text-slate-400">尚無待辦事項</span>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-center">
+                        <span id="totalCount" class="block text-xl font-bold text-slate-800 dark:text-slate-100">0</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400">總任務</span>
+                    </div>
+                    <div class="text-center">
+                        <span id="activeCount" class="block text-xl font-bold text-amber-500">0</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400">進行中</span>
+                    </div>
+                    <div class="text-center">
+                        <span id="completedCount" class="block text-xl font-bold text-emerald-500">0</span>
+                        <span class="text-xs text-slate-500 dark:text-slate-400">已完成</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden">
+                <div id="progressBar" class="bg-emerald-500 h-full w-0 transition-all duration-500 ease-out"></div>
+            </div>
+        </section>
+
+        <!-- Add Task Form Container -->
+        <section class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 mb-6">
+            <form id="todoForm" class="flex flex-col gap-3">
+                <div class="flex gap-2">
+                    <input type="text" id="todoInput" placeholder="寫下接下來要完成的事情..." required
+                           class="flex-grow px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 text-sm placeholder-slate-400">
+                    <button type="submit" 
+                            class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-2 shrink-0">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="hidden sm:inline">新增任務</span>
+                    </button>
+                </div>
+
+                <!-- Extended Options (Priority, Category, Due Date) -->
+                <div class="flex flex-wrap items-center gap-3 pt-1">
+                    <!-- Priority -->
+                    <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+                        <i class="fa-solid fa-flag text-slate-400"></i>
+                        <select id="prioritySelect" class="bg-transparent focus:outline-none text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <option value="low">低優先級</option>
+                            <option value="medium" selected>中優先級</option>
+                            <option value="high">高優先級</option>
+                        </select>
+                    </div>
+
+                    <!-- Category -->
+                    <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+                        <i class="fa-solid fa-folder text-slate-400"></i>
+                        <select id="categorySelect" class="bg-transparent focus:outline-none text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <option value="工作">💼 工作</option>
+                            <option value="個人" selected>👤 個人</option>
+                            <option value="學習">📚 學習</option>
+                            <option value="購物">🛒 購物</option>
+                            <option value="健康">💪 健康</option>
+                        </select>
+                    </div>
+
+                    <!-- Due Date -->
+                    <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+                        <i class="fa-regular fa-calendar text-slate-400"></i>
+                        <input type="date" id="dueDateInput" class="bg-transparent focus:outline-none text-slate-700 dark:text-slate-300 cursor-pointer">
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Controls: Filters, Search, Sort -->
+        <section class="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
+            
+            <!-- Status Tabs -->
+            <div class="flex bg-slate-200/70 dark:bg-slate-800 p-1 rounded-xl w-full md:w-auto text-xs font-medium">
+                <button data-filter="all" class="filter-tab flex-1 md:flex-none px-4 py-2 rounded-lg transition text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white">全部</button>
+                <button data-filter="active" class="filter-tab flex-1 md:flex-none px-4 py-2 rounded-lg transition text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">進行中</button>
+                <button data-filter="completed" class="filter-tab flex-1 md:flex-none px-4 py-2 rounded-lg transition text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">已完成</button>
+            </div>
+
+            <!-- Search Bar & Sorting -->
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <div class="relative flex-grow md:w-56">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="searchInput" placeholder="搜尋任務..." 
+                           class="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <select id="sortBySelect" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none">
+                    <option value="createdAt">建立時間</option>
+                    <option value="dueDate">到期日期</option>
+                    <option value="priority">優先等級</option>
+                </select>
+
+                <!-- Batch Actions Dropdown / Clear Completed -->
+                <button id="clearCompletedBtn" title="清除已完成事項" class="p-2 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition text-xs font-medium flex items-center gap-1 shrink-0">
+                    <i class="fa-regular fa-trash-can"></i>
+                    <span class="hidden sm:inline">清除完成項</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Category Filters Pill Row -->
+        <div id="categoryFilterContainer" class="flex items-center gap-2 overflow-x-auto pb-2 mb-4 text-xs">
+            <!-- Dynamic Category Pills inserted here -->
+        </div>
+
+        <!-- Task List Area -->
+        <main id="todoList" class="space-y-3">
+            <!-- JavaScript will render tasks here -->
+        </main>
+
+        <!-- Empty State Container -->
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-16 text-center bg-white dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 mb-3 text-2xl">
+                <i class="fa-regular fa-clipboard"></i>
+            </div>
+            <h3 class="text-base font-medium text-slate-700 dark:text-slate-300">沒有找到任何代辦事項</h3>
+            <p class="text-xs text-slate-400 mt-1">試著新增一個任務或清除搜尋條件吧！</p>
+        </div>
+
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">編輯任務</h3>
+                <button id="closeEditModalBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="editForm" class="space-y-4">
+                <input type="hidden" id="editTaskId">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">任務內容</label>
+                    <input type="text" id="editTaskTitle" required class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">優先級</label>
+                        <select id="editTaskPriority" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none">
+                            <option value="low">低</option>
+                            <option value="medium">中</option>
+                            <option value="high">高</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">分類</label>
+                        <select id="editTaskCategory" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none">
+                            <option value="工作">💼 工作</option>
+                            <option value="個人">👤 個人</option>
+                            <option value="學習">📚 學習</option>
+                            <option value="購物">🛒 購物</option>
+                            <option value="健康">💪 健康</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">到期日</label>
+                        <input type="date" id="editTaskDueDate" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs focus:outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="cancelEditBtn" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition">取消</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition shadow-sm">儲存變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal (Replaces alert/confirm) -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 dark:border-slate-700 text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-500 flex items-center justify-center mx-auto mb-3 text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="confirmModalTitle" class="text-base font-bold text-slate-800 dark:text-slate-100 mb-1">確定要刪除嗎？</h3>
+            <p id="confirmModalDesc" class="text-xs text-slate-500 dark:text-slate-400 mb-5">此動作將無法復原。</p>
+            <div class="flex justify-center gap-3">
+                <button id="cancelConfirmBtn" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition">取消</button>
+                <button id="actionConfirmBtn" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 transition shadow-sm">確定刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // Key for localstorage persistence
+        const STORAGE_KEY = 'taskmaster_todos_v1';
+        const THEME_KEY = 'taskmaster_theme';
+
+        // Application State
+        let todos = [];
+        let currentFilterStatus = 'all'; // 'all', 'active', 'completed'
+        let currentCategoryFilter = 'all';
+        let searchQuery = '';
+        let currentSortBy = 'createdAt';
+        let pendingConfirmAction = null;
+
+        // Priority Mappings
+        const priorityConfig = {
+            high: { label: '高', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800' },
+            medium: { label: '中', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800' },
+            low: { label: '低', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800' }
+        };
+
+        // Load initial data from localStorage
+        function loadTodos() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    todos = JSON.parse(stored);
+                } else {
+                    // 初始化為空清單，不加入預設測試資料
+                    todos = [];
+                    saveTodos();
+                }
+            } catch (e) {
+                console.error("無法存取 localStorage:", e);
+                todos = [];
+            }
+        }
+
+        // Save current todos array to localStorage
+        function saveTodos() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+            } catch (e) {
+                showToast("資料儲存失敗，請確認記憶體容量", "error");
+            }
+            render();
+        }
+
+        // Helper: Get today YYYY-MM-DD
+        function getTodayString() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // Helper: Format Date for display
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '';
+            const today = getTodayString();
+            if (dateStr === today) return '今天';
+            
+            const target = new Date(dateStr);
+            const now = new Date(today);
+            const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) return '明天';
+            if (diffDays < 0) return `逾期 ${Math.abs(diffDays)} 天`;
+            return dateStr;
+        }
+
+        // Add new task
+        function addTodo(title, priority, category, dueDate) {
+            const newTodo = {
+                id: Date.now().toString(),
+                title: title.trim(),
+                completed: false,
+                priority,
+                category,
+                dueDate,
+                createdAt: Date.now(),
+                subtasks: []
+            };
+            todos.unshift(newTodo);
+            saveTodos();
+            showToast("成功新增任務！", "success");
+        }
+
+        // Toggle task completion
+        function toggleTodo(id) {
+            todos = todos.map(todo => {
+                if (todo.id === id) {
+                    const newStatus = !todo.completed;
+                    // If task is completed, also mark all subtasks as completed
+                    const updatedSubtasks = todo.subtasks ? todo.subtasks.map(s => ({ ...s, completed: newStatus })) : [];
+                    return { ...todo, completed: newStatus, subtasks: updatedSubtasks };
+                }
+                return todo;
+            });
+            saveTodos();
+        }
+
+        // Delete single task
+        function deleteTodo(id) {
+            todos = todos.filter(todo => todo.id !== id);
+            saveTodos();
+            showToast("已刪除該項任務", "info");
+        }
+
+        // Edit task
+        function updateTodo(id, title, priority, category, dueDate) {
+            todos = todos.map(todo => {
+                if (todo.id === id) {
+                    return { ...todo, title: title.trim(), priority, category, dueDate };
+                }
+                return todo;
+            });
+            saveTodos();
+            showToast("任務已更新！", "success");
+        }
+
+        // Subtask functions
+        function addSubtask(todoId, subtaskTitle) {
+            if (!subtaskTitle.trim()) return;
+            todos = todos.map(todo => {
+                if (todo.id === todoId) {
+                    const newSub = { id: Date.now().toString(), title: subtaskTitle.trim(), completed: false };
+                    return { ...todo, subtasks: [...(todo.subtasks || []), newSub] };
+                }
+                return todo;
+            });
+            saveTodos();
+        }
+
+        function toggleSubtask(todoId, subtaskId) {
+            todos = todos.map(todo => {
+                if (todo.id === todoId) {
+                    const updatedSub = todo.subtasks.map(sub => 
+                        sub.id === subtaskId ? { ...sub, completed: !sub.completed } : sub
+                    );
+                    // Check if all subtasks completed -> update parent if needed
+                    const allDone = updatedSub.length > 0 && updatedSub.every(s => s.completed);
+                    return { ...todo, subtasks: updatedSub, completed: allDone ? true : todo.completed };
+                }
+                return todo;
+            });
+            saveTodos();
+        }
+
+        function deleteSubtask(todoId, subtaskId) {
+            todos = todos.map(todo => {
+                if (todo.id === todoId) {
+                    return { ...todo, subtasks: todo.subtasks.filter(s => s.id !== subtaskId) };
+                }
+                return todo;
+            });
+            saveTodos();
+        }
+
+        // Filter & Sort tasks
+        function getFilteredTodos() {
+            return todos.filter(todo => {
+                // Status Filter
+                if (currentFilterStatus === 'active' && todo.completed) return false;
+                if (currentFilterStatus === 'completed' && !todo.completed) return false;
+
+                // Category Filter
+                if (currentCategoryFilter !== 'all' && todo.category !== currentCategoryFilter) return false;
+
+                // Search Query
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    const titleMatch = todo.title.toLowerCase().includes(query);
+                    const categoryMatch = todo.category.toLowerCase().includes(query);
+                    return titleMatch || categoryMatch;
+                }
+
+                return true;
+            }).sort((a, b) => {
+                if (currentSortBy === 'dueDate') {
+                    if (!a.dueDate) return 1;
+                    if (!b.dueDate) return -1;
+                    return new Date(a.dueDate) - new Date(b.dueDate);
+                }
+                if (currentSortBy === 'priority') {
+                    const priorityWeight = { high: 3, medium: 2, low: 1 };
+                    return priorityWeight[b.priority] - priorityWeight[a.priority];
+                }
+                // Default: createdAt descending
+                return b.createdAt - a.createdAt;
+            });
+        }
+
+        // Render UI
+        function render() {
+            renderStats();
+            renderCategoryPills();
+            renderTodoList();
+        }
+
+        function renderStats() {
+            const total = todos.length;
+            const completed = todos.filter(t => t.completed).length;
+            const active = total - completed;
+            const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('activeCount').textContent = active;
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+
+            const statsText = document.getElementById('statsText');
+            if (total === 0) {
+                statsText.textContent = "目前無任務，新增一個吧！";
+            } else {
+                statsText.textContent = `完成率 ${percentage}% (${completed}/${total})`;
+            }
+        }
+
+        function renderCategoryPills() {
+            const container = document.getElementById('categoryFilterContainer');
+            // Get all unique categories
+            const categories = ['all', ...new Set(todos.map(t => t.category).filter(Boolean))];
+
+            container.innerHTML = categories.map(cat => {
+                const isActive = currentCategoryFilter === cat;
+                const label = cat === 'all' ? '全部分類' : cat;
+                const activeClasses = 'bg-emerald-600 text-white shadow-sm';
+                const inactiveClasses = 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700';
+
+                return `
+                    <button data-category="${cat}" class="category-pill px-3 py-1 rounded-full text-xs font-medium transition shrink-0 ${isActive ? activeClasses : inactiveClasses}">
+                        ${label}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderTodoList() {
+            const todoListEl = document.getElementById('todoList');
+            const emptyStateEl = document.getElementById('emptyState');
+            const filtered = getFilteredTodos();
+
+            if (filtered.length === 0) {
+                todoListEl.innerHTML = '';
+                emptyStateEl.classList.remove('hidden');
+                emptyStateEl.classList.add('flex');
+                return;
+            }
+
+            emptyStateEl.classList.add('hidden');
+            emptyStateEl.classList.remove('flex');
+
+            const todayStr = getTodayString();
+
+            todoListEl.innerHTML = filtered.map(todo => {
+                const priorityInfo = priorityConfig[todo.priority] || priorityConfig.medium;
+                const dateDisplay = formatDateDisplay(todo.dueDate);
+                const isOverdue = todo.dueDate && todo.dueDate < todayStr && !todo.completed;
+                const isToday = todo.dueDate === todayStr && !todo.completed;
+
+                // Subtasks calculation
+                const subtasks = todo.subtasks || [];
+                const doneSubtasks = subtasks.filter(s => s.completed).length;
+
+                return `
+                    <div class="group bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-700/80 transition hover:shadow-md ${todo.completed ? 'opacity-65' : ''}" data-id="${todo.id}">
+                        <div class="flex items-start justify-between gap-3">
+                            
+                            <!-- Checkbox & Content -->
+                            <div class="flex items-start gap-3 flex-grow min-w-0">
+                                <button onclick="toggleTodo('${todo.id}')" class="mt-0.5 shrink-0 text-xl text-slate-300 dark:text-slate-600 hover:text-emerald-500 dark:hover:text-emerald-400 transition">
+                                    ${todo.completed 
+                                        ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' 
+                                        : '<i class="fa-regular fa-circle"></i>'}
+                                </button>
+
+                                <div class="flex-grow min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <!-- Title -->
+                                        <span class="font-medium text-sm text-slate-800 dark:text-slate-100 break-words ${todo.completed ? 'line-through text-slate-400 dark:text-slate-500' : ''}">
+                                            ${escapeHtml(todo.title)}
+                                        </span>
+                                    </div>
+
+                                    <!-- Badges & Tags -->
+                                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                        <!-- Priority Badge -->
+                                        <span class="px-2 py-0.5 rounded-md border ${priorityInfo.color} font-medium">
+                                            ${priorityInfo.label}優先級
+                                        </span>
+
+                                        <!-- Category Tag -->
+                                        <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                            ${escapeHtml(todo.category)}
+                                        </span>
+
+                                        <!-- Due Date Badge -->
+                                        ${todo.dueDate ? `
+                                            <span class="flex items-center gap-1 px-2 py-0.5 rounded-md ${
+                                                isOverdue ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-semibold' :
+                                                isToday ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 font-semibold' :
+                                                'bg-slate-100 dark:bg-slate-700'
+                                            }">
+                                                <i class="fa-regular fa-clock"></i>
+                                                ${dateDisplay}
+                                            </span>
+                                        ` : ''}
+
+                                        <!-- Subtasks Counter -->
+                                        ${subtasks.length > 0 ? `
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-solid fa-list-check"></i>
+                                                ${doneSubtasks}/${subtasks.length}
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex items-center gap-1 shrink-0 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                <button onclick="toggleSubtaskSection('${todo.id}')" title="子任務" class="p-1.5 text-slate-400 hover:text-emerald-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                    <i class="fa-solid fa-sitemap text-xs"></i>
+                                </button>
+                                <button onclick="openEditModal('${todo.id}')" title="編輯" class="p-1.5 text-slate-400 hover:text-blue-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="promptDeleteTodo('${todo.id}')" title="刪除" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Subtasks Accordion Section -->
+                        <div id="subtasks-container-${todo.id}" class="hidden pt-3 mt-3 border-t border-slate-100 dark:border-slate-700/60 pl-8 space-y-2">
+                            <div class="space-y-1.5">
+                                ${subtasks.map(sub => `
+                                    <div class="flex items-center justify-between gap-2 text-xs">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-grow min-w-0">
+                                            <input type="checkbox" ${sub.completed ? 'checked' : ''} onchange="toggleSubtask('${todo.id}', '${sub.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 dark:bg-slate-900 border-slate-300 dark:border-slate-700">
+                                            <span class="${sub.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-300'} break-all">${escapeHtml(sub.title)}</span>
+                                        </label>
+                                        <button onclick="deleteSubtask('${todo.id}', '${sub.id}')" class="text-slate-400 hover:text-rose-500 text-xs p-1">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <!-- Add Subtask Input -->
+                            <div class="flex gap-2 pt-1">
+                                <input type="text" id="subtask-input-${todo.id}" placeholder="+ 新增子任務..." 
+                                       class="flex-grow px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                                <button onclick="handleAddSubtask('${todo.id}')" class="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-emerald-600 hover:text-white text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium transition">
+                                    新增
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle Expand Subtask Section
+        function toggleSubtaskSection(id) {
+            const container = document.getElementById(`subtasks-container-${id}`);
+            if (container) {
+                container.classList.toggle('hidden');
+            }
+        }
+
+        function handleAddSubtask(id) {
+            const input = document.getElementById(`subtask-input-${id}`);
+            if (input && input.value.trim()) {
+                addSubtask(id, input.value);
+                input.value = '';
+                // Keep subtask section expanded
+                const container = document.getElementById(`subtasks-container-${id}`);
+                if (container) container.classList.remove('hidden');
+            }
+        }
+
+        // Modal Handlers
+        function openEditModal(id) {
+            const todo = todos.find(t => t.id === id);
+            if (!todo) return;
+
+            document.getElementById('editTaskId').value = todo.id;
+            document.getElementById('editTaskTitle').value = todo.title;
+            document.getElementById('editTaskPriority').value = todo.priority;
+            document.getElementById('editTaskCategory').value = todo.category;
+            document.getElementById('editTaskDueDate').value = todo.dueDate || '';
+
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function promptDeleteTodo(id) {
+            pendingConfirmAction = () => deleteTodo(id);
+            document.getElementById('confirmModalTitle').textContent = "刪除此任務？";
+            document.getElementById('confirmModalDesc').textContent = "此項操作無法還原，確定要繼續嗎？";
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function promptClearCompleted() {
+            const completedCount = todos.filter(t => t.completed).length;
+            if (completedCount === 0) {
+                showToast("目前沒有已完成的任務", "info");
+                return;
+            }
+            pendingConfirmAction = () => {
+                todos = todos.filter(t => !t.completed);
+                saveTodos();
+                showToast(`已清理 ${completedCount} 項完成事項`, "success");
+            };
+            document.getElementById('confirmModalTitle').textContent = "清理已完成任務？";
+            document.getElementById('confirmModalDesc').textContent = `即將刪除 ${completedCount} 個已標示為完成的項目。`;
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            pendingConfirmAction = null;
+            document.getElementById('confirmModal').classList.add('hidden');
+        }
+
+        // Custom Toast System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const bgColors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white',
+                info: 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900'
+            };
+
+            const icons = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-exclamation',
+                info: 'fa-circle-info'
+            };
+
+            toast.className = `toast-animate pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2 ${bgColors[type] || bgColors.info}`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${escapeHtml(message)}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        // Helper: Escape HTML to prevent XSS
+        function escapeHtml(str) {
+            return str ? str.replace(/[&<>"']/g, m => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            })[m]) : '';
+        }
+
+        // Dark Theme Switcher
+        function initTheme() {
+            const storedTheme = localStorage.getItem(THEME_KEY);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-lg text-amber-400';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-lg text-slate-600';
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun text-lg text-amber-400' : 'fa-solid fa-moon text-lg text-slate-600';
+        }
+
+        // Export/Import JSON Backup
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(todos, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `TaskMaster_Backup_${getTodayString()}.json`);
+            document.body.appendChild(dlAnchorElem);
+            dlAnchorElem.click();
+            dlAnchorElem.remove();
+            showToast("成功匯出備份 JSON！", "success");
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (Array.isArray(imported)) {
+                        todos = imported;
+                        saveTodos();
+                        showToast("成功匯入資料！", "success");
+                    } else {
+                        showToast("檔案格式不符", "error");
+                    }
+                } catch (err) {
+                    showToast("JSON 檔案解析失敗", "error");
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset input
+        }
+
+        // Initialize Event Listeners
+        function setupEventListeners() {
+            // Form submission for new todo
+            document.getElementById('todoForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('todoInput');
+                const priority = document.getElementById('prioritySelect').value;
+                const category = document.getElementById('categorySelect').value;
+                const dueDate = document.getElementById('dueDateInput').value;
+
+                if (input.value.trim()) {
+                    addTodo(input.value, priority, category, dueDate);
+                    input.value = '';
+                }
+            });
+
+            // Filter Tabs
+            document.querySelectorAll('.filter-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-tab').forEach(b => {
+                        b.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-900', 'dark:text-white');
+                        b.classList.add('text-slate-600', 'dark:text-slate-300');
+                    });
+                    btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-slate-900', 'dark:text-white');
+                    btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+
+                    currentFilterStatus = btn.dataset.filter;
+                    renderTodoList();
+                });
+            });
+
+            // Category Filter Pills Delegation
+            document.getElementById('categoryFilterContainer').addEventListener('click', (e) => {
+                const pill = e.target.closest('.category-pill');
+                if (pill) {
+                    currentCategoryFilter = pill.dataset.category;
+                    render();
+                }
+            });
+
+            // Search & Sort inputs
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                renderTodoList();
+            });
+
+            document.getElementById('sortBySelect').addEventListener('change', (e) => {
+                currentSortBy = e.target.value;
+                renderTodoList();
+            });
+
+            // Clear completed button
+            document.getElementById('clearCompletedBtn').addEventListener('click', promptClearCompleted);
+
+            // Edit Modal Submissions
+            document.getElementById('editForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('editTaskId').value;
+                const title = document.getElementById('editTaskTitle').value;
+                const priority = document.getElementById('editTaskPriority').value;
+                const category = document.getElementById('editTaskCategory').value;
+                const dueDate = document.getElementById('editTaskDueDate').value;
+
+                updateTodo(id, title, priority, category, dueDate);
+                closeEditModal();
+            });
+
+            document.getElementById('closeEditModalBtn').addEventListener('click', closeEditModal);
+            document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+
+            // Confirm Modal Actions
+            document.getElementById('actionConfirmBtn').addEventListener('click', () => {
+                if (pendingConfirmAction) pendingConfirmAction();
+                closeConfirmModal();
+            });
+            document.getElementById('cancelConfirmBtn').addEventListener('click', closeConfirmModal);
+
+            // Theme & Export/Import
+            document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+            document.getElementById('exportBtn').addEventListener('click', exportData);
+            document.getElementById('importInput').addEventListener('change', importData);
+        }
+
+        // Window Onload Initialization
+        window.onload = function() {
+            initTheme();
+            loadTodos();
+            setupEventListeners();
+        };
+    </script>
+</body>
+</html>
