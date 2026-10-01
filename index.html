@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🐮 歡樂牧場：小牛吃草闖關記</title>
+  <style>
+    :root {
+      --bg-color: #2d5a27;
+      --board-bg: #88c057;
+      --board-alt: #7cb342;
+      --text-color: #ffffff;
+      --panel-bg: rgba(20, 40, 15, 0.85);
+      --accent: #ffeb3b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 10px;
+      touch-action: manipulation;
+    }
+
+    .header-panel {
+      background: var(--panel-bg);
+      padding: 12px 20px;
+      border-radius: 16px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      border: 2px solid #aed581;
+      backdrop-filter: blur(5px);
+    }
+
+    .stat-box {
+      text-align: center;
+    }
+    .stat-label { font-size: 0.75rem; color: #c5e1a5; text-transform: uppercase; }
+    .stat-value { font-size: 1.25rem; font-weight: bold; color: var(--accent); }
+
+    .game-container {
+      position: relative;
+      border: 6px solid #558b2f;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+    }
+
+    canvas {
+      display: block;
+      background: var(--board-bg);
+    }
+
+    /* 遊戲彈窗/遮罩 */
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 30, 10, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      z-index: 10;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .btn {
+      background: #7cb342;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 25px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #33691e;
+      transition: all 0.1s;
+    }
+    .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #33691e; }
+
+    /* 觸控 D-Pad 控制介面 */
+    .controls-container {
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dpad-row { display: flex; gap: 10px; }
+    
+    .dpad-btn {
+      width: 55px;
+      height: 55px;
+      background: var(--panel-bg);
+      border: 2px solid #aed581;
+      border-radius: 12px;
+      color: white;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+    }
+    .dpad-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+
+    @media (min-width: 600px) {
+      .controls-container { display: none; } /* 桌面端隱藏 Touch D-pad */
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-panel">
+    <div class="stat-box">
+      <div class="stat-label">關卡</div>
+      <div class="stat-value" id="level-val">1</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">飽足度 (飽飽)</div>
+      <div class="stat-value"><span id="score-val">0</span> / <span id="target-val">5</span> 🌿</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">最高紀錄</div>
+      <div class="stat-value" id="high-val">0</div>
+    </div>
+  </div>
+
+  <div class="game-container">
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <!-- 開始 / 過關 / 結束 遮罩面板 -->
+    <div id="startModal" class="overlay">
+      <h1 style="color: #ffeb3b; font-size: 2rem;">🐮 小牛吃草闖關記</h1>
+      <p style="max-width: 280px; line-height: 1.5;">控制小牛吃光草原上的鮮草 🌿！<br>注意不要撞到籬笆 🪵 和自己的牛身體喔！</p>
+      <button class="btn" onclick="startGame()">開始吃草！</button>
+    </div>
+
+    <div id="gameOverModal" class="overlay hidden">
+      <h2 style="color: #ff5252; font-size: 2rem;">💥 小牛撞倒了！</h2>
+      <p id="gameOverReason">小牛不小心撞到障礙物了...</p>
+      <p>本次得分: <span id="finalScore" style="color:#ffeb3b;">0</span></p>
+      <button class="btn" onclick="restartGame()">重新挑戰 🔄</button>
+    </div>
+
+    <div id="levelWinModal" class="overlay hidden">
+      <h2 style="color: #aed581; font-size: 2rem;">🎉 吃飽飽過關！</h2>
+      <p>小牛成長了！前往下一片牧場～</p>
+      <button class="btn" onclick="nextLevel()">下一關 🚀</button>
+    </div>
+  </div>
+
+  <!-- 手機版 虛擬十字鍵 -->
+  <div class="controls-container">
+    <div class="dpad-row">
+      <div class="dpad-btn" onclick="handleInput('ArrowUp')">⬆️</div>
+    </div>
+    <div class="dpad-row">
+      <div class="dpad-btn" onclick="handleInput('ArrowLeft')">⬅️</div>
+      <div class="dpad-btn" onclick="togglePause()">⏸️</div>
+      <div class="dpad-btn" onclick="handleInput('ArrowRight')">➡️</div>
+    </div>
+    <div class="dpad-row">
+      <div class="dpad-btn" onclick="handleInput('ArrowDown')">⬇️</div>
+    </div>
+  </div>
+
+  <script>
+    // --- 網頁音效合成器 (Web Audio API Synthesizer) ---
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      },
+      playEat() { // 吃草音效 (Crunchy Munch)
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.08);
+      },
+      playMoo() { // 過關「哞～」聲音效
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(130, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.4);
+      },
+      playHit() { // 撞擊音效
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(80, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+      }
+    };
+
+    // --- 遊戲邏輯與地圖設定 ---
+    const GRID_COUNT = 20;
+    const CANVAS_SIZE = 400;
+    const CELL_SIZE = CANVAS_SIZE / GRID_COUNT;
+    const STORAGE_KEY = 'cow_game_highscore';
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 關卡設定：(速度漸快、目標遞增、新增籬笆障礙物)
+    const LEVELS = [
+      { target: 5,  speed: 160, obstacles: [] },
+      { target: 8,  speed: 140, obstacles: [{x:10,y:10}, {x:10,y:11}, {x:10,y:9}] },
+      { target: 12, speed: 120, obstacles: [{x:5,y:5}, {x:5,y:6}, {x:14,y:14}, {x:14,y:13}] },
+      { target: 15, speed: 100, obstacles: [{x:9,y:9}, {x:10,y:9}, {x:9,y:10}, {x:10,y:10}] },
+      { target: 20, speed: 85,  obstacles: [{x:4,y:10}, {x:5,y:10}, {x:6,y:10}, {x:13,y:10}, {x:14,y:10}, {x:15,y:10}] }
+    ];
+
+    let currentLevel = 0;
+    let score = 0;
+    let highScore = loadHighScore();
+    let levelScore = 0;
+
+    let cow = []; // 牛身 (網格陣列)
+    let direction = { x: 0, y: -1 };
+    let inputQueue = [];
+    let grass = { x: 0, y: 0, isGold: false };
+    let obstacles = [];
+
+    let isPlaying = false;
+    let isPaused = false;
+
+    // 時間迴圈控制 (rAF Engine)
+    let lastTime = 0;
+    let accumulator = 0;
+
+    document.getElementById('high-val').textContent = highScore;
+
+    // --- 安全 LocalStorage 存取 ---
+    function loadHighScore() {
+      try {
+        const v = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+        return Number.isInteger(v) && v >= 0 ? v : 0;
+      } catch { return 0; }
+    }
+    function saveHighScore(val) {
+      try { localStorage.setItem(STORAGE_KEY, val.toString()); } catch {}
+    }
+
+    // --- 遊戲流程控制 ---
+    function startGame() {
+      AudioEngine.init();
+      document.getElementById('startModal').classList.add('hidden');
+      currentLevel = 0;
+      score = 0;
+      initLevel();
+      isPlaying = true;
+    }
+
+    function restartGame() {
+      document.getElementById('gameOverModal').classList.add('hidden');
+      currentLevel = 0;
+      score = 0;
+      initLevel();
+      isPlaying = true;
+    }
+
+    function nextLevel() {
+      document.getElementById('levelWinModal').classList.add('hidden');
+      currentLevel = Math.min(currentLevel + 1, LEVELS.length - 1);
+      initLevel();
+      isPlaying = true;
+    }
+
+    function initLevel() {
+      const config = LEVELS[currentLevel];
+      levelScore = 0;
+      
+      // 初始化小牛位置 (中間向南)
+      cow = [
+        { x: 10, y: 12 },
+        { x: 10, y: 13 },
+        { x: 10, y: 14 }
+      ];
+      direction = { x: 0, y: -1 };
+      inputQueue = [];
+      obstacles = config.obstacles;
+
+      updateUI();
+      spawnGrass();
+    }
+
+    function updateUI() {
+      const config = LEVELS[currentLevel];
+      document.getElementById('level-val').textContent = currentLevel + 1;
+      document.getElementById('score-val').textContent = levelScore;
+      document.getElementById('target-val').textContent = config.target;
+      document.getElementById('high-val').textContent = highScore;
+    }
+
+    function spawnGrass() {
+      while (true) {
+        const gx = Math.floor(Math.random() * GRID_COUNT);
+        const gy = Math.floor(Math.random() * GRID_COUNT);
+
+        // 避免生長在牛身或籬笆上
+        const onCow = cow.some(s => s.x === gx && s.y === gy);
+        const onObs = obstacles.some(o => o.x === gx && o.y === gy);
+
+        if (!onCow && !onObs) {
+          grass = {
+            x: gx,
+            y: gy,
+            isGold: Math.random() < 0.2 // 20% 機率生成金黃特級苜蓿草
+          };
+          break;
+        }
+      }
+    }
+
+    // --- 輸入控制引擎 (防 180 度翻轉) ---
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space') { togglePause(); return; }
+      handleInput(e.key);
+    });
+
+    function handleInput(key) {
+      const keyMap = {
+        ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 }, W: { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 }, S: { x: 0, y: 1 },
+        ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 }, A: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 }, D: { x: 1, y: 0 }
+      };
+
+      const nextDir = keyMap[key];
+      if (!nextDir) return;
+
+      const lastDir = inputQueue.length > 0 ? inputQueue[inputQueue.length - 1] : direction;
+      const isOpposite = (nextDir.x + lastDir.x === 0) && (nextDir.y + lastDir.y === 0);
+
+      if (!isOpposite && inputQueue.length < 2) {
+        inputQueue.push(nextDir);
+      }
+    }
+
+    function togglePause() {
+      if (isPlaying) isPaused = !isPaused;
+    }
+
+    // --- 遊戲邏輯更新 ---
+    function update() {
+      if (!isPlaying || isPaused) return;
+
+      if (inputQueue.length > 0) {
+        direction = inputQueue.shift();
+      }
+
+      const head = { x: cow[0].x + direction.x, y: cow[0].y + direction.y };
+
+      // 1. 撞牆檢測
+      if (head.x < 0 || head.x >= GRID_COUNT || head.y < 0 || head.y >= GRID_COUNT) {
+        triggerGameOver('小牛跑出牧場範圍撞倒了！');
+        return;
+      }
+
+      // 2. 撞自身檢測
+      if (cow.some(s => s.x === head.x && s.y === head.y)) {
+        triggerGameOver('小牛被自己的身體打結絆倒了！');
+        return;
+      }
+
+      // 3. 撞籬笆障礙物檢測
+      if (obstacles.some(o => o.x === head.x && o.y === head.y)) {
+        triggerGameOver('小牛撞到木籬笆了！');
+        return;
+      }
+
+      cow.unshift(head); // 前進
+
+      // 4. 吃草檢測
+      if (head.x === grass.x && head.y === grass.y) {
+        AudioEngine.playEat();
+        const pts = grass.isGold ? 2 : 1;
+        levelScore += pts;
+        score += pts;
+
+        if (score > highScore) {
+          highScore = score;
+          saveHighScore(highScore);
+        }
+
+        updateUI();
+
+        // 檢查是否達成關卡目標
+        const config = LEVELS[currentLevel];
+        if (levelScore >= config.target) {
+          AudioEngine.playMoo();
+          isPlaying = false;
+          if (currentLevel < LEVELS.length - 1) {
+            document.getElementById('levelWinModal').classList.remove('hidden');
+          } else {
+            alert('🎉 恭喜你通關了所有牧場關卡！小牛變成了超級大肥牛！');
+            restartGame();
+          }
+          return;
+        }
+
+        spawnGrass();
+      } else {
+        cow.pop(); // 沒吃到草，縮回尾巴
+      }
+    }
+
+    function triggerGameOver(reason) {
+      AudioEngine.playHit();
+      isPlaying = false;
+      document.getElementById('gameOverReason').textContent = reason;
+      document.getElementById('finalScore').textContent = score;
+      document.getElementById('gameOverModal').classList.remove('hidden');
+    }
+
+    // --- 繪製畫布 (Render) ---
+    function render() {
+      // 1. 繪製棋盤格草地
+      for (let r = 0; r < GRID_COUNT; r++) {
+        for (let c = 0; c < GRID_COUNT; c++) {
+          ctx.fillStyle = (r + c) % 2 === 0 ? '#88c057' : '#7cb342';
+          ctx.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        }
+      }
+
+      // 2. 繪製木頭籬笆 (障礙物)
+      obstacles.forEach(o => {
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(o.x * CELL_SIZE + 2, o.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(o.x * CELL_SIZE + 4, o.y * CELL_SIZE + 6, CELL_SIZE - 8, 4);
+      });
+
+      // 3. 繪製牧草 (草堆 / 黃金苜蓿草)
+      ctx.font = `${CELL_SIZE * 0.75}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        grass.isGold ? '🌾' : '🌿',
+        grass.x * CELL_SIZE + CELL_SIZE / 2,
+        grass.y * CELL_SIZE + CELL_SIZE / 2 + 2
+      );
+
+      // 4. 繪製牛隻 (頭部 🐮 與身體 乳牛斑紋)
+      cow.forEach((seg, i) => {
+        const x = seg.x * CELL_SIZE;
+        const y = seg.y * CELL_SIZE;
+
+        if (i === 0) {
+          // 牛頭 🐮
+          ctx.fillText('🐮', x + CELL_SIZE / 2, y + CELL_SIZE / 2 + 2);
+        } else {
+          // 牛身：乳牛黑白圖案
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, 6);
+          ctx.fill();
+
+          // 黑色乳牛斑點
+          ctx.fillStyle = '#212121';
+          ctx.beginPath();
+          ctx.arc(x + CELL_SIZE * 0.3, y + CELL_SIZE * 0.3, CELL_SIZE * 0.2, 0, Math.PI * 2);
+          ctx.arc(x + CELL_SIZE * 0.7, y + CELL_SIZE * 0.6, CELL_SIZE * 0.15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    // --- 主遊戲引擎迴圈 ---
+    function gameLoop(time) {
+      if (!lastTime) lastTime = time;
+      let dt = time - lastTime;
+      lastTime = time;
+
+      if (dt > 1000) dt = LEVELS[currentLevel].speed;
+      accumulator += dt;
+
+      const targetSpeed = LEVELS[currentLevel] ? LEVELS[currentLevel].speed : 120;
+
+      while (accumulator >= targetSpeed) {
+        update();
+        accumulator -= targetSpeed;
+      }
+
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
