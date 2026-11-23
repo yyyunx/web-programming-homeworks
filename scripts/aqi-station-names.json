@@ -1,0 +1,326 @@
+{
+  "source": "https://data.moenv.gov.tw/dataset/detail/AQX_P_07",
+  "retrievedAt": "2026-11-23",
+  "stations": {
+    "140": {
+      "sitename": "林森",
+      "county": "臺南市"
+    },
+    "139": {
+      "sitename": "員林",
+      "county": "彰化縣"
+    },
+    "88": {
+      "sitename": "臺灣大道",
+      "county": "臺中市"
+    },
+    "85": {
+      "sitename": "大城",
+      "county": "彰化縣"
+    },
+    "84": {
+      "sitename": "富貴角",
+      "county": "新北市"
+    },
+    "83": {
+      "sitename": "麥寮",
+      "county": "雲林縣"
+    },
+    "80": {
+      "sitename": "關山",
+      "county": "臺東縣"
+    },
+    "78": {
+      "sitename": "馬公",
+      "county": "澎湖縣"
+    },
+    "77": {
+      "sitename": "金門",
+      "county": "金門縣"
+    },
+    "75": {
+      "sitename": "馬祖",
+      "county": "連江縣"
+    },
+    "72": {
+      "sitename": "埔里",
+      "county": "南投縣"
+    },
+    "71": {
+      "sitename": "復興",
+      "county": "高雄市"
+    },
+    "70": {
+      "sitename": "永和",
+      "county": "新北市"
+    },
+    "69": {
+      "sitename": "竹山",
+      "county": "南投縣"
+    },
+    "68": {
+      "sitename": "中壢",
+      "county": "桃園市"
+    },
+    "67": {
+      "sitename": "三重",
+      "county": "新北市"
+    },
+    "66": {
+      "sitename": "冬山",
+      "county": "宜蘭縣"
+    },
+    "65": {
+      "sitename": "宜蘭",
+      "county": "宜蘭縣"
+    },
+    "64": {
+      "sitename": "陽明",
+      "county": "臺北市"
+    },
+    "63": {
+      "sitename": "花蓮",
+      "county": "花蓮縣"
+    },
+    "62": {
+      "sitename": "臺東",
+      "county": "臺東縣"
+    },
+    "61": {
+      "sitename": "恆春",
+      "county": "屏東縣"
+    },
+    "60": {
+      "sitename": "潮州",
+      "county": "屏東縣"
+    },
+    "59": {
+      "sitename": "屏東",
+      "county": "屏東縣"
+    },
+    "58": {
+      "sitename": "小港",
+      "county": "高雄市"
+    },
+    "57": {
+      "sitename": "前鎮",
+      "county": "高雄市"
+    },
+    "56": {
+      "sitename": "前金",
+      "county": "高雄市"
+    },
+    "54": {
+      "sitename": "左營",
+      "county": "高雄市"
+    },
+    "53": {
+      "sitename": "楠梓",
+      "county": "高雄市"
+    },
+    "52": {
+      "sitename": "林園",
+      "county": "高雄市"
+    },
+    "51": {
+      "sitename": "大寮",
+      "county": "高雄市"
+    },
+    "50": {
+      "sitename": "鳳山",
+      "county": "高雄市"
+    },
+    "49": {
+      "sitename": "仁武",
+      "county": "高雄市"
+    },
+    "48": {
+      "sitename": "橋頭",
+      "county": "高雄市"
+    },
+    "47": {
+      "sitename": "美濃",
+      "county": "高雄市"
+    },
+    "46": {
+      "sitename": "臺南",
+      "county": "臺南市"
+    },
+    "45": {
+      "sitename": "安南",
+      "county": "臺南市"
+    },
+    "44": {
+      "sitename": "善化",
+      "county": "臺南市"
+    },
+    "43": {
+      "sitename": "新營",
+      "county": "臺南市"
+    },
+    "42": {
+      "sitename": "嘉義",
+      "county": "嘉義市"
+    },
+    "41": {
+      "sitename": "臺西",
+      "county": "雲林縣"
+    },
+    "40": {
+      "sitename": "朴子",
+      "county": "嘉義縣"
+    },
+    "39": {
+      "sitename": "新港",
+      "county": "嘉義縣"
+    },
+    "38": {
+      "sitename": "崙背",
+      "county": "雲林縣"
+    },
+    "37": {
+      "sitename": "斗六",
+      "county": "雲林縣"
+    },
+    "36": {
+      "sitename": "南投",
+      "county": "南投縣"
+    },
+    "35": {
+      "sitename": "二林",
+      "county": "彰化縣"
+    },
+    "34": {
+      "sitename": "線西",
+      "county": "彰化縣"
+    },
+    "33": {
+      "sitename": "彰化",
+      "county": "彰化縣"
+    },
+    "32": {
+      "sitename": "西屯",
+      "county": "臺中市"
+    },
+    "31": {
+      "sitename": "忠明",
+      "county": "臺中市"
+    },
+    "30": {
+      "sitename": "大里",
+      "county": "臺中市"
+    },
+    "29": {
+      "sitename": "沙鹿",
+      "county": "臺中市"
+    },
+    "28": {
+      "sitename": "豐原",
+      "county": "臺中市"
+    },
+    "27": {
+      "sitename": "三義",
+      "county": "苗栗縣"
+    },
+    "26": {
+      "sitename": "苗栗",
+      "county": "苗栗縣"
+    },
+    "25": {
+      "sitename": "頭份",
+      "county": "苗栗縣"
+    },
+    "24": {
+      "sitename": "新竹",
+      "county": "新竹市"
+    },
+    "23": {
+      "sitename": "竹東",
+      "county": "新竹縣"
+    },
+    "22": {
+      "sitename": "湖口",
+      "county": "新竹縣"
+    },
+    "21": {
+      "sitename": "龍潭",
+      "county": "桃園市"
+    },
+    "20": {
+      "sitename": "平鎮",
+      "county": "桃園市"
+    },
+    "19": {
+      "sitename": "觀音",
+      "county": "桃園市"
+    },
+    "18": {
+      "sitename": "大園",
+      "county": "桃園市"
+    },
+    "17": {
+      "sitename": "桃園",
+      "county": "桃園市"
+    },
+    "16": {
+      "sitename": "大同",
+      "county": "臺北市"
+    },
+    "15": {
+      "sitename": "松山",
+      "county": "臺北市"
+    },
+    "14": {
+      "sitename": "古亭",
+      "county": "臺北市"
+    },
+    "13": {
+      "sitename": "萬華",
+      "county": "臺北市"
+    },
+    "12": {
+      "sitename": "中山",
+      "county": "臺北市"
+    },
+    "11": {
+      "sitename": "士林",
+      "county": "臺北市"
+    },
+    "10": {
+      "sitename": "淡水",
+      "county": "新北市"
+    },
+    "9": {
+      "sitename": "林口",
+      "county": "新北市"
+    },
+    "8": {
+      "sitename": "菜寮",
+      "county": "新北市"
+    },
+    "7": {
+      "sitename": "新莊",
+      "county": "新北市"
+    },
+    "6": {
+      "sitename": "板橋",
+      "county": "新北市"
+    },
+    "5": {
+      "sitename": "土城",
+      "county": "新北市"
+    },
+    "4": {
+      "sitename": "新店",
+      "county": "新北市"
+    },
+    "2": {
+      "sitename": "汐止",
+      "county": "新北市"
+    },
+    "1": {
+      "sitename": "基隆",
+      "county": "基隆市"
+    }
+  }
+}
