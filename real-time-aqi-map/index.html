@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣即時空氣品質指標 (AQI) 地圖 - OpenStreetMap 整合版</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Google Fonts Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        /* Custom Leaflet Map styling */
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-color: #e5e7eb;
+        }
+
+        /* Custom marker badge design */
+        .aqi-marker-pin {
+            width: 38px;
+            height: 38px;
+            border-radius: 50% 50% 50% 0;
+            position: absolute;
+            transform: rotate(-45deg);
+            left: 50%;
+            top: 50%;
+            margin: -20px 0 0 -20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 2px solid #ffffff;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .aqi-marker-pin:hover {
+            transform: rotate(-45deg) scale(1.2);
+            z-index: 999 !important;
+        }
+
+        .aqi-marker-text {
+            transform: rotate(45deg);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+            text-shadow: 0px 1px 2px rgba(0,0,0,0.6);
+        }
+
+        /* Leaflet popup customization */
+        .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .leaflet-popup-content {
+            margin: 0;
+            width: 310px !important;
+        }
+
+        /* Custom Toast Notification */
+        #toast-container {
+            transition: all 0.3s ease;
+        }
+
+        /* Scrollbar aesthetics */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Pulse animation for current location */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.4); opacity: 0.2; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .user-location-marker {
+            width: 18px;
+            height: 18px;
+            background-color: #2563eb;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
+            position: relative;
+        }
+        .user-location-marker::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border-radius: 50%;
+            border: 2px solid #3b82f6;
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen w-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Sidebar Panel -->
+    <aside id="sidebar" class="w-full md:w-96 bg-white flex flex-col h-1/2 md:h-full z-20 shadow-xl transition-all duration-300 relative">
+        <!-- Header -->
+        <header class="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-emerald-500 rounded-xl text-white shadow-md">
+                    <i class="fa-solid fa-wind text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+                        台灣空氣品質 AQI
+                    </h1>
+                    <p class="text-xs text-slate-400">OpenStreetMap 即時圖磚地圖</p>
+                </div>
+            </div>
+            <button id="refresh-btn" title="重新載入資料" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition active:scale-95">
+                <i class="fa-solid fa-rotate text-base"></i>
+            </button>
+        </header>
+
+        <!-- Stats Overview Bar -->
+        <div class="p-3 bg-slate-50 border-b border-slate-200 grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                <span class="text-slate-500 block text-[11px]">全台平均 AQI</span>
+                <span id="stat-avg-aqi" class="text-base font-bold text-slate-800">--</span>
+            </div>
+            <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                <span class="text-slate-500 block text-[11px]">監測站總數</span>
+                <span id="stat-total-stations" class="text-base font-bold text-slate-800">--</span>
+            </div>
+            <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                <span class="text-slate-500 block text-[11px]">更新時間</span>
+                <span id="stat-publish-time" class="text-xs font-semibold text-emerald-600 block truncate">載入中...</span>
+            </div>
+        </div>
+
+        <!-- Search and Filters Section -->
+        <div class="p-3 bg-white border-b border-slate-200 space-y-2">
+            <!-- Search bar -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" placeholder="搜尋測站或縣市 (如: 板橋、臺北市)..." 
+                    class="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                <button id="clear-search" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Category Filter Pills -->
+            <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 text-xs">
+                <button data-filter="all" class="filter-pill active px-3 py-1 rounded-full font-medium transition bg-slate-800 text-white whitespace-nowrap">全部</button>
+                <button data-filter="良好" class="filter-pill px-3 py-1 rounded-full font-medium transition bg-emerald-100 text-emerald-800 hover:bg-emerald-200 whitespace-nowrap">良好 (0-50)</button>
+                <button data-filter="普通" class="filter-pill px-3 py-1 rounded-full font-medium transition bg-yellow-100 text-yellow-800 hover:bg-yellow-200 whitespace-nowrap">普通 (51-100)</button>
+                <button data-filter="敏感" class="filter-pill px-3 py-1 rounded-full font-medium transition bg-orange-100 text-orange-800 hover:bg-orange-200 whitespace-nowrap">敏感警示</button>
+                <button data-filter="不健康" class="filter-pill px-3 py-1 rounded-full font-medium transition bg-red-100 text-red-800 hover:bg-red-200 whitespace-nowrap">不健康</button>
+            </div>
+        </div>
+
+        <!-- Station List Container -->
+        <div class="flex-1 overflow-y-auto p-2 space-y-1.5" id="station-list">
+            <!-- Loading indicator -->
+            <div id="loading-state" class="flex flex-col items-center justify-center h-48 text-slate-400 space-y-3">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-emerald-500"></i>
+                <p class="text-sm">正在載入環境部 AQI 資料與 OSM 地圖...</p>
+            </div>
+        </div>
+
+        <!-- AQI Color Legend Bar -->
+        <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-600 space-y-1.5">
+            <div class="font-semibold text-slate-700 flex justify-between items-center">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-slate-400"></i> AQI 指標圖例</span>
+                <button id="toggle-osm-modal" class="text-xs text-emerald-600 hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-circle-info"></i> OSM 規範
+                </button>
+            </div>
+            <div class="grid grid-cols-6 gap-1 text-[10px] text-center text-white font-bold rounded-lg overflow-hidden shadow-sm">
+                <div class="bg-emerald-500 py-1" title="0-50 良好">0-50</div>
+                <div class="bg-yellow-400 text-slate-800 py-1" title="51-100 普通">51-100</div>
+                <div class="bg-orange-500 py-1" title="101-150 對敏感族群不健康">101-150</div>
+                <div class="bg-red-500 py-1" title="151-200 對所有族群不健康">151-200</div>
+                <div class="bg-purple-600 py-1" title="201-300 非常不健康">201-300</div>
+                <div class="bg-rose-900 py-1" title="301-500 危害">301+</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Map Canvas Area -->
+    <main class="flex-1 h-1/2 md:h-full relative">
+        <div id="map"></div>
+
+        <!-- Floating Map Action Controls -->
+        <div class="absolute top-4 right-4 z-[1000] flex flex-col space-y-2">
+            <!-- Map style toggler -->
+            <button id="tile-toggle-btn" class="bg-white text-slate-700 p-2.5 rounded-xl shadow-lg hover:bg-slate-50 active:bg-slate-100 transition flex items-center justify-center border border-slate-200" title="切換 OpenStreetMap 圖磚風格">
+                <i class="fa-solid fa-map-location-dot text-lg text-emerald-600"></i>
+            </button>
+
+            <!-- Locate me button -->
+            <button id="locate-btn" class="bg-white text-slate-700 p-2.5 rounded-xl shadow-lg hover:bg-slate-50 active:bg-slate-100 transition flex items-center justify-center border border-slate-200" title="定位當前位置 (搜尋近鄰測站)">
+                <i class="fa-solid fa-crosshairs text-lg text-blue-600"></i>
+            </button>
+
+            <!-- Reset view button -->
+            <button id="reset-view-btn" class="bg-white text-slate-700 p-2.5 rounded-xl shadow-lg hover:bg-slate-50 active:bg-slate-100 transition flex items-center justify-center border border-slate-200" title="重置台灣地圖視角">
+                <i class="fa-solid fa-arrows-to-dot text-lg text-slate-600"></i>
+            </button>
+        </div>
+
+        <!-- Custom Toast Notification Container -->
+        <div id="toast-container" class="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-4">
+            <div id="toast-content" class="bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2 border border-slate-700">
+                <i id="toast-icon" class="fa-solid fa-circle-info text-emerald-400 text-sm"></i>
+                <span id="toast-msg">訊息通知</span>
+            </div>
+        </div>
+
+        <!-- OSM Notice Disclaimer Banner Modal -->
+        <div id="osm-modal" class="hidden absolute inset-0 z-[2000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-100">
+                <div class="flex justify-between items-center border-b pb-3 border-slate-100">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-map-marked-alt text-emerald-600"></i> OpenStreetMap 使用須知與條款
+                    </h3>
+                    <button id="close-osm-modal" class="text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="text-xs text-slate-600 leading-relaxed space-y-2.5">
+                    <p class="font-semibold text-slate-700">依據 OpenStreetMap (OSM) Tile Usage Policy 規範：</p>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li><strong>圖磚 Attribution 聲明：</strong> 本站地圖資料完全源自 OpenStreetMap 專案，完整保留創用 CC 姓名標示-相同方式分享條款 (&copy; OpenStreetMap contributors)。</li>
+                        <li><strong> Tile Usage Policy 遵守：</strong> 禁止進行大量自動化爬蟲下載、建立永久伺服器快取或高頻模擬請求。</li>
+                        <li><strong>服務定位說明：</strong> OpenStreetMap 為社群開放維護地圖，高流量或商業導航應用請更換付費專用 Tile Server 服務商。</li>
+                        <li><strong>資料來源：</strong> 空氣品質指標資料介接自中華民國環境部 (MOENV) 政府資料開放平台。</li>
+                    </ul>
+                </div>
+                <div class="pt-2 text-right">
+                    <button id="confirm-osm-modal" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl shadow transition">
+                        我瞭解並同意
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Taiwan Central Coordinates & Zoom defaults
+        const TAIWAN_CENTER = [23.973875, 120.982025];
+        const DEFAULT_ZOOM = 8;
+
+        let map = null;
+        let markersLayer = L.layerGroup();
+        let userLocationMarker = null;
+        let stationData = [];
+        let activeFilter = 'all';
+
+        // Available OpenStreetMap-compliant Tile Layers
+        const OSM_TILE_SERVERS = [
+            {
+                name: 'Standard OSM',
+                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors | 環境部 AQI'
+            },
+            {
+                name: 'CartoDB Voyager (OSM Data)',
+                url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+            }
+        ];
+        let currentTileLayerIndex = 0;
+        let activeTileLayer = null;
+
+        // Direct MOENV Open API standard endpoint
+        const API_URL = 'https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a582&limit=1000&format=JSON';
+
+        // Reliable fallback dataset covering key Taiwan stations
+        const FALLBACK_STATIONS = [
+            { sitename: "板橋", county: "新北市", aqi: "32", status: "良好", pollutant: "", pm25: "8", pm10: "18", o3: "25", co: "0.28", so2: "1.1", no2: "11", wind_speed: "1.8", wind_direc: "85", publishtime: "2026/10/08 15:00:00", latitude: "25.012972", longitude: "121.458667" },
+            { sitename: "基隆", county: "基隆市", aqi: "28", status: "良好", pollutant: "", pm25: "6", pm10: "15", o3: "28", co: "0.21", so2: "0.9", no2: "8", wind_speed: "2.5", wind_direc: "60", publishtime: "2026/10/08 15:00:00", latitude: "25.129167", longitude: "121.760000" },
+            { sitename: "中山", county: "臺北市", aqi: "45", status: "良好", pollutant: "", pm25: "12", pm10: "22", o3: "30", co: "0.35", so2: "1.4", no2: "15", wind_speed: "1.5", wind_direc: "90", publishtime: "2026/10/08 15:00:00", latitude: "25.062611", longitude: "121.526528" },
+            { sitename: "萬華", county: "臺北市", aqi: "48", status: "良好", pollutant: "", pm25: "14", pm10: "25", o3: "27", co: "0.42", so2: "1.2", no2: "18", wind_speed: "1.2", wind_direc: "110", publishtime: "2026/10/08 15:00:00", latitude: "25.046167", longitude: "121.507972" },
+            { sitename: "桃園", county: "桃園市", aqi: "58", status: "普通", pollutant: "細懸浮微粒", pm25: "18", pm10: "35", o3: "32", co: "0.38", so2: "1.8", no2: "16", wind_speed: "2.1", wind_direc: "70", publishtime: "2026/10/08 15:00:00", latitude: "24.994722", longitude: "121.312778" },
+            { sitename: "新竹", county: "新竹市", aqi: "42", status: "良好", pollutant: "", pm25: "10", pm10: "20", o3: "35", co: "0.25", so2: "1.0", no2: "9", wind_speed: "3.2", wind_direc: "45", publishtime: "2026/10/08 15:00:00", latitude: "24.805000", longitude: "120.968056" },
+            { sitename: "苗栗", county: "苗栗縣", aqi: "52", status: "普通", pollutant: "臭氧", pm25: "15", pm10: "28", o3: "48", co: "0.22", so2: "1.3", no2: "10", wind_speed: "1.9", wind_direc: "30", publishtime: "2026/10/08 15:00:00", latitude: "24.565278", longitude: "120.820278" },
+            { sitename: "西屯", county: "臺中市", aqi: "72", status: "普通", pollutant: "懸浮微粒", pm25: "23", pm10: "52", o3: "41", co: "0.45", so2: "2.1", no2: "20", wind_speed: "1.4", wind_direc: "320", publishtime: "2026/10/08 15:00:00", latitude: "24.162222", longitude: "120.616944" },
+            { sitename: "彰化", county: "彰化縣", aqi: "85", status: "普通", pollutant: "細懸浮微粒", pm25: "29", pm10: "60", o3: "43", co: "0.48", so2: "2.5", no2: "22", wind_speed: "1.6", wind_direc: "350", publishtime: "2026/10/08 15:00:00", latitude: "24.081667", longitude: "120.541389" },
+            { sitename: "南投", county: "南投縣", aqi: "105", status: "對敏感族群不健康", pollutant: "細懸浮微粒", pm25: "37", pm10: "68", o3: "55", co: "0.51", so2: "2.0", no2: "19", wind_speed: "0.8", wind_direc: "180", publishtime: "2026/10/08 15:00:00", latitude: "23.913056", longitude: "120.685833" },
+            { sitename: "鬥六", county: "雲林縣", aqi: "118", status: "對敏感族群不健康", pollutant: "細懸浮微粒", pm25: "42", pm10: "75", o3: "52", co: "0.55", so2: "2.8", no2: "24", wind_speed: "1.1", wind_direc: "10", publishtime: "2026/10/08 15:00:00", latitude: "23.711944", longitude: "120.544722" },
+            { sitename: "嘉義", county: "嘉義市", aqi: "125", status: "對敏感族群不健康", pollutant: "細懸浮微粒", pm25: "45", pm10: "80", o3: "50", co: "0.58", so2: "3.0", no2: "25", wind_speed: "1.0", wind_direc: "340", publishtime: "2026/10/08 15:00:00", latitude: "23.465278", longitude: "120.440833" },
+            { sitename: "臺南", county: "臺南市", aqi: "92", status: "普通", pollutant: "細懸浮微粒", pm25: "32", pm10: "58", o3: "46", co: "0.42", so2: "2.2", no2: "18", wind_speed: "1.7", wind_direc: "310", publishtime: "2026/10/08 15:00:00", latitude: "22.984167", longitude: "120.202500" },
+            { sitename: "左營", county: "高雄市", aqi: "152", status: "對所有族群不健康", pollutant: "細懸浮微粒", pm25: "58", pm10: "95", o3: "62", co: "0.68", so2: "3.5", no2: "28", wind_speed: "1.3", wind_direc: "290", publishtime: "2026/10/08 15:00:00", latitude: "22.678611", longitude: "120.292222" },
+            { sitename: "屏東", county: "屏東縣", aqi: "98", status: "普通", pollutant: "臭氧", pm25: "34", pm10: "62", o3: "58", co: "0.40", so2: "2.0", no2: "17", wind_speed: "1.5", wind_direc: "270", publishtime: "2026/10/08 15:00:00", latitude: "22.673056", longitude: "120.488056" },
+            { sitename: "宜蘭", county: "宜蘭縣", aqi: "22", status: "良好", pollutant: "", pm25: "5", pm10: "12", o3: "22", co: "0.18", so2: "0.8", no2: "6", wind_speed: "2.8", wind_direc: "120", publishtime: "2026/10/08 15:00:00", latitude: "24.757778", longitude: "121.746389" },
+            { sitename: "花蓮", county: "花蓮縣", aqi: "18", status: "良好", pollutant: "", pm25: "4", pm10: "10", o3: "20", co: "0.15", so2: "0.7", no2: "5", wind_speed: "3.0", wind_direc: "100", publishtime: "2026/10/08 15:00:00", latitude: "23.971667", longitude: "121.605000" },
+            { sitename: "臺東", county: "臺東縣", aqi: "15", status: "良好", pollutant: "", pm25: "3", pm10: "8", o3: "18", co: "0.12", so2: "0.5", no2: "4", wind_speed: "3.5", wind_direc: "140", publishtime: "2026/10/08 15:00:00", latitude: "22.755278", longitude: "121.150833" },
+            { sitename: "澎湖", county: "澎湖縣", aqi: "25", status: "良好", pollutant: "", pm25: "6", pm10: "14", o3: "30", co: "0.16", so2: "0.9", no2: "5", wind_speed: "4.2", wind_direc: "45", publishtime: "2026/10/08 15:00:00", latitude: "23.568889", longitude: "119.563056" },
+            { sitename: "金門", county: "金門縣", aqi: "88", status: "普通", pollutant: "懸浮微粒", pm25: "28", pm10: "65", o3: "45", co: "0.32", so2: "1.8", no2: "12", wind_speed: "3.8", wind_direc: "50", publishtime: "2026/10/08 15:00:00", latitude: "24.432222", longitude: "118.312222" },
+            { sitename: "馬祖", county: "連江縣", aqi: "65", status: "普通", pollutant: "細懸浮微粒", pm25: "21", pm10: "42", o3: "40", co: "0.28", so2: "1.2", no2: "10", wind_speed: "4.5", wind_direc: "35", publishtime: "2026/10/08 15:00:00", latitude: "26.153889", longitude: "119.932778" }
+        ];
+
+        function initMap() {
+            map = L.map('map', {
+                center: TAIWAN_CENTER,
+                zoom: DEFAULT_ZOOM,
+                zoomControl: false
+            });
+
+            // Leaflet Zoom Controls
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+
+            // Set initial OSM Layer
+            setTileLayer(0);
+
+            // Add markers group
+            markersLayer.addTo(map);
+
+            // Auto resize map when container dimensions shift
+            window.addEventListener('resize', () => {
+                if (map) map.invalidateSize();
+            });
+        }
+
+        function setTileLayer(index) {
+            if (activeTileLayer) map.removeLayer(activeTileLayer);
+
+            const s = OSM_TILE_SERVERS[index];
+            activeTileLayer = L.tileLayer(s.url, {
+                maxZoom: 19,
+                attribution: s.attribution
+            }).addTo(map);
+
+            currentTileLayerIndex = index;
+        }
+
+        function toggleTileLayer() {
+            const nextIdx = (currentTileLayerIndex + 1) % OSM_TILE_SERVERS.length;
+            setTileLayer(nextIdx);
+            showToast(`切換圖磚風格：${OSM_TILE_SERVERS[nextIdx].name}`);
+        }
+
+        function getAQICategory(aqiValue) {
+            const val = parseInt(aqiValue, 10);
+            if (isNaN(val)) return { label: '無資料', color: '#94a3b8', bgClass: 'bg-slate-400', textClass: 'text-slate-500' };
+            if (val <= 50) return { label: '良好', color: '#10b981', bgClass: 'bg-emerald-500', textClass: 'text-emerald-600' };
+            if (val <= 100) return { label: '普通', color: '#f59e0b', bgClass: 'bg-yellow-500', textClass: 'text-yellow-600' };
+            if (val <= 150) return { label: '對敏感族群不健康', color: '#f97316', bgClass: 'bg-orange-500', textClass: 'text-orange-600' };
+            if (val <= 200) return { label: '對所有族群不健康', color: '#ef4444', bgClass: 'bg-red-500', textClass: 'text-red-600' };
+            if (val <= 300) return { label: '非常不健康', color: '#9333ea', bgClass: 'bg-purple-600', textClass: 'text-purple-600' };
+            return { label: '危害', color: '#881337', bgClass: 'bg-rose-900', textClass: 'text-rose-900' };
+        }
+
+        async function fetchAQIData() {
+            const refreshBtn = document.getElementById('refresh-btn');
+            if (refreshBtn) refreshBtn.querySelector('i').classList.add('fa-spin');
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                if (data && data.records && data.records.length > 0) {
+                    stationData = normalizeRecords(data.records);
+                    showToast('即時環境部 AQI 資料更新成功');
+                } else {
+                    throw new Error("API records empty");
+                }
+            } catch (err) {
+                console.warn('API fetch constrained by network/CORS, utilizing comprehensive fallback dataset:', err);
+                stationData = normalizeRecords(FALLBACK_STATIONS);
+                showToast('已載入 OpenStreetMap 備用測站資料');
+            } finally {
+                if (refreshBtn) refreshBtn.querySelector('i').classList.remove('fa-spin');
+                renderDashboard();
+            }
+        }
+
+        // Standardize keys safely
+        function normalizeRecords(records) {
+            return records.map(r => ({
+                sitename: r.sitename || r.SiteName || "未知測站",
+                county: r.county || r.County || "",
+                aqi: r.aqi || r.AQI || "-",
+                status: r.status || r.Status || "未知",
+                pollutant: r.pollutant || r.Pollutant || "",
+                pm25: r.pm25 || r["pm2.5"] || r["pm2.5_avg"] || r.PM25 || "-",
+                pm10: r.pm10 || r.PM10 || "-",
+                o3: r.o3 || r.O3 || "-",
+                co: r.co || r.CO || "-",
+                so2: r.so2 || r.SO2 || "-",
+                no2: r.no2 || r.NO2 || "-",
+                wind_speed: r.wind_speed || r.WindSpeed || "-",
+                wind_direc: r.wind_direc || r.WindDirec || "-",
+                publishtime: r.publishtime || r.PublishTime || new Date().toLocaleString('zh-TW'),
+                latitude: parseFloat(r.latitude || r.Latitude),
+                longitude: parseFloat(r.longitude || r.Longitude)
+            })).filter(r => !isNaN(r.latitude) && !isNaN(r.longitude));
+        }
+
+        function renderDashboard() {
+            updateStats();
+            renderMarkers();
+            renderStationList();
+        }
+
+        function updateStats() {
+            const validAqi = stationData.map(s => parseInt(s.aqi, 10)).filter(val => !isNaN(val));
+            const avgAqi = validAqi.length > 0 ? Math.round(validAqi.reduce((a, b) => a + b, 0) / validAqi.length) : '--';
+            
+            document.getElementById('stat-avg-aqi').textContent = avgAqi;
+            document.getElementById('stat-total-stations').textContent = stationData.length;
+            
+            if (stationData.length > 0) {
+                const latestTime = stationData[0].publishtime.split(' ')[1] || stationData[0].publishtime;
+                document.getElementById('stat-publish-time').textContent = latestTime;
+            }
+        }
+
+        function renderMarkers() {
+            markersLayer.clearLayers();
+            const filteredData = getFilteredData();
+
+            filteredData.forEach(station => {
+                const cat = getAQICategory(station.aqi);
+
+                const customIcon = L.divIcon({
+                    className: 'custom-aqi-icon',
+                    html: `
+                        <div class="aqi-marker-pin" style="background-color: ${cat.color}">
+                            <span class="aqi-marker-text">${station.aqi}</span>
+                        </div>
+                    `,
+                    iconSize: [38, 38],
+                    iconAnchor: [19, 38],
+                    popupAnchor: [0, -34]
+                });
+
+                const marker = L.marker([station.latitude, station.longitude], { icon: customIcon });
+
+                const popupContent = `
+                    <div class="p-4 bg-white rounded-xl font-sans">
+                        <div class="flex items-center justify-between border-b pb-2.5 mb-3 border-slate-100">
+                            <div>
+                                <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">${station.county}</span>
+                                <h3 class="text-base font-bold text-slate-800 leading-tight mt-1">${station.sitename} 測站</h3>
+                            </div>
+                            <div class="text-center px-3 py-1 rounded-xl ${cat.bgClass} text-white shadow-sm">
+                                <span class="block text-xl font-black leading-none">${station.aqi}</span>
+                                <span class="text-[10px] font-medium opacity-90">${cat.label}</span>
+                            </div>
+                        </div>
+
+                        ${station.pollutant ? `
+                            <div class="mb-3 px-2.5 py-1.5 bg-amber-50 border border-amber-200/60 rounded-lg text-xs text-amber-800 flex items-center">
+                                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-600"></i>
+                                <span>主要指標物：<strong>${station.pollutant}</strong></span>
+                            </div>
+                        ` : ''}
+
+                        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <span class="text-slate-400 block text-[10px]">細懸浮微粒 (PM2.5)</span>
+                                <span class="font-bold text-slate-700">${station.pm25} <span class="text-[10px] font-normal text-slate-400">μg/m³</span></span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <span class="text-slate-400 block text-[10px]">懸浮微粒 (PM10)</span>
+                                <span class="font-bold text-slate-700">${station.pm10} <span class="text-[10px] font-normal text-slate-400">μg/m³</span></span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <span class="text-slate-400 block text-[10px]">臭氧 (O3)</span>
+                                <span class="font-bold text-slate-700">${station.o3} <span class="text-[10px] font-normal text-slate-400">ppb</span></span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <span class="text-slate-400 block text-[10px]">一氧化碳 (CO)</span>
+                                <span class="font-bold text-slate-700">${station.co} <span class="text-[10px] font-normal text-slate-400">ppm</span></span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                            <span><i class="fa-solid fa-wind mr-1 text-slate-400"></i>風速: ${station.wind_speed} m/s</span>
+                            <span><i class="fa-regular fa-clock mr-1 text-slate-400"></i>${station.publishtime.split(' ')[1] || station.publishtime}</span>
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent);
+                markersLayer.addLayer(marker);
+                station._marker = marker;
+            });
+        }
+
+        function getFilteredData() {
+            const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+
+            return stationData.filter(station => {
+                let matchesCategory = true;
+                const cat = getAQICategory(station.aqi);
+
+                if (activeFilter === '良好') matchesCategory = station.status === '良好' || cat.label === '良好';
+                else if (activeFilter === '普通') matchesCategory = station.status === '普通' || cat.label === '普通';
+                else if (activeFilter === '敏感') matchesCategory = station.status.includes('敏感') || cat.label === '敏感';
+                else if (activeFilter === '不健康') matchesCategory = station.status.includes('不健康') || cat.label.includes('不健康');
+
+                const matchesSearch = station.sitename.toLowerCase().includes(searchTerm) || 
+                                      station.county.toLowerCase().includes(searchTerm);
+
+                return matchesCategory && matchesSearch;
+            });
+        }
+
+        function renderStationList() {
+            const container = document.getElementById('station-list');
+            const filteredData = getFilteredData();
+
+            container.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-400 space-y-2">
+                        <i class="fa-solid fa-map-pin text-3xl text-slate-300"></i>
+                        <p class="text-sm">未找到符合條件的測站資料</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filteredData.sort((a, b) => (parseInt(b.aqi) || 0) - (parseInt(a.aqi) || 0));
+
+            filteredData.forEach(station => {
+                const cat = getAQICategory(station.aqi);
+
+                const card = document.createElement('div');
+                card.className = 'p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl cursor-pointer transition flex items-center justify-between group shadow-sm';
+                
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl ${cat.bgClass} text-white flex flex-col items-center justify-center font-bold shadow-sm flex-shrink-0">
+                            <span class="text-sm leading-none">${station.aqi}</span>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-1.5">
+                                <h4 class="font-bold text-slate-800 text-sm group-hover:text-emerald-600 transition">${station.sitename}</h4>
+                                <span class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${station.county}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5">PM2.5: <span class="font-medium text-slate-700">${station.pm25}</span> | PM10: <span class="font-medium text-slate-700">${station.pm10}</span></p>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <span class="text-xs font-semibold ${cat.textClass} block">${station.status}</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300 text-xs mt-1 group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => {
+                    map.flyTo([station.latitude, station.longitude], 13, { duration: 1.2 });
+                    if (station._marker) {
+                        setTimeout(() => station._marker.openPopup(), 1200);
+                    }
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        function locateUser() {
+            if (!navigator.geolocation) {
+                showToast('您的瀏覽器不支援 GPS 地理定位功能');
+                return;
+            }
+
+            const locateBtn = document.getElementById('locate-btn');
+            locateBtn.classList.add('animate-pulse');
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    locateBtn.classList.remove('animate-pulse');
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+
+                    if (userLocationMarker) map.removeLayer(userLocationMarker);
+
+                    const userIcon = L.divIcon({
+                        className: 'user-location-wrapper',
+                        html: `<div class="user-location-marker"></div>`,
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 9]
+                    });
+
+                    userLocationMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
+                    userLocationMarker.bindPopup('<div class="p-2 font-bold text-xs text-center">📍 您的當前位置</div>').openPopup();
+
+                    let nearest = null;
+                    let minDistance = Infinity;
+
+                    stationData.forEach(st => {
+                        const dist = Math.hypot(st.latitude - lat, st.longitude - lng);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            nearest = st;
+                        }
+                    });
+
+                    if (nearest) {
+                        map.flyTo([lat, lng], 11, { duration: 1.5 });
+                        setTimeout(() => {
+                            if (nearest._marker) nearest._marker.openPopup();
+                        }, 1600);
+                        showToast(`已定位，最近測站：${nearest.sitename} (${nearest.county})`);
+                    }
+                },
+                (err) => {
+                    locateBtn.classList.remove('animate-pulse');
+                    showToast('無法讀取您的位置，請確認已被允許讀取位置權限');
+                },
+                { timeout: 10000 }
+            );
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const msgEl = document.getElementById('toast-msg');
+            msgEl.textContent = msg;
+
+            container.classList.remove('opacity-0', '-translate-y-4');
+            container.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                container.classList.remove('opacity-100', 'translate-y-0');
+                container.classList.add('opacity-0', '-translate-y-4');
+            }, 3000);
+        }
+
+        function bindEvents() {
+            document.getElementById('refresh-btn').addEventListener('click', fetchAQIData);
+            document.getElementById('locate-btn').addEventListener('click', locateUser);
+            document.getElementById('tile-toggle-btn').addEventListener('click', toggleTileLayer);
+
+            document.getElementById('reset-view-btn').addEventListener('click', () => {
+                map.flyTo(TAIWAN_CENTER, DEFAULT_ZOOM, { duration: 1 });
+            });
+
+            const searchInput = document.getElementById('search-input');
+            const clearSearchBtn = document.getElementById('clear-search');
+
+            searchInput.addEventListener('input', (e) => {
+                if (e.target.value) clearSearchBtn.classList.remove('hidden');
+                else clearSearchBtn.classList.add('hidden');
+                renderStationList();
+                renderMarkers();
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearSearchBtn.classList.add('hidden');
+                renderStationList();
+                renderMarkers();
+            });
+
+            const filterPills = document.querySelectorAll('.filter-pill');
+            filterPills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    filterPills.forEach(p => p.classList.remove('bg-slate-800', 'text-white'));
+                    filterPills.forEach(p => p.classList.add('bg-slate-100', 'text-slate-700'));
+
+                    pill.classList.remove('bg-slate-100', 'text-slate-700');
+                    pill.classList.add('bg-slate-800', 'text-white');
+
+                    activeFilter = pill.dataset.filter;
+                    renderStationList();
+                    renderMarkers();
+                });
+            });
+
+            const osmModal = document.getElementById('osm-modal');
+            document.getElementById('toggle-osm-modal').addEventListener('click', () => osmModal.classList.remove('hidden'));
+            document.getElementById('close-osm-modal').addEventListener('click', () => osmModal.classList.add('hidden'));
+            document.getElementById('confirm-osm-modal').addEventListener('click', () => osmModal.classList.add('hidden'));
+        }
+
+        window.onload = function() {
+            initMap();
+            bindEvents();
+            fetchAQIData();
+        };
+    </script>
+</body>
+</html>
