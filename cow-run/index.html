@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>牛牛逃生記：Cow Run - AI Pose Control Game</title>
+
+
+
+  <!-- Tailwind CSS -->
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+
+
+  <!-- Google Fonts: Inter & Phosphor Icons -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+
+
+  <!-- Compatibility fix: @teachablemachine/pose@0.8.6 requires @tensorflow/tfjs@1.3.1. -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.6/dist/teachablemachine-pose.min.js"></script>
+
+
+
+  <style>
+
+    body {
+
+      font-family: 'Fredoka', 'Inter', system-ui, sans-serif;
+
+      background: radial-gradient(circle at top center, #1e293b 0%, #0f172a 100%);
+
+      color: #f8fafc;
+
+      touch-action: manipulation;
+
+    }
+
+
+
+    /* Custom Scrollbar */
+
+    ::-webkit-scrollbar {
+
+      width: 6px;
+
+      height: 6px;
+
+    }
+
+    ::-webkit-scrollbar-track {
+
+      background: #0f172a;
+
+    }
+
+    ::-webkit-scrollbar-thumb {
+
+      background: #334155;
+
+      border-radius: 9999px;
+
+    }
+
+
+
+    /* Animated Glow & Pulse Effects */
+
+    .glow-green {
+
+      box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+
+    }
+
+    .glow-orange {
+
+      box-shadow: 0 0 20px rgba(251, 146, 60, 0.4);
+
+    }
+
+    .glow-red {
+
+      box-shadow: 0 0 20px rgba(248, 113, 113, 0.5);
+
+    }
+
+
+
+    /* Canvas styling */
+
+    #gameCanvas {
+
+      background: #111827;
+
+      border-radius: 1rem;
+
+      width: 100%;
+
+      height: auto;
+
+      max-height: 520px;
+
+      object-fit: contain;
+
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+
+    }
+
+
+
+    /* Debounce progress bar animation */
+
+    .progress-bar {
+
+      transition: width 0.05s linear;
+
+    }
+
+  </style>
+
+</head>
+
+<body class="min-h-screen flex flex-col justify-between p-3 md:p-6 text-slate-100 selection:bg-emerald-500 selection:text-white">
+
+
+
+  <header class="max-w-7xl mx-auto w-full mb-4 flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 backdrop-blur border border-slate-700/60 p-4 rounded-2xl shadow-xl">
+
+    <div class="flex items-center gap-3">
+
+      <div class="w-12 h-12 bg-emerald-500/20 border border-emerald-400/40 rounded-xl flex items-center justify-center text-3xl shadow-inner">
+
+        🐄
+
+      </div>
+
+      <div>
+
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">
+
+          牛牛逃生記 <span class="text-sm font-bold text-slate-400 tracking-normal ml-1">Cow Run</span>
+
+        </h1>
+
+        <p class="text-xs md:text-sm text-slate-400 flex items-center gap-2">
+
+          <span>AI 姿勢感應：歪頭左/右移，舉手走中間！預設慢速模式。</span>
+
+        </p>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- Header Status & Controls -->
+
+    <div class="flex items-center gap-3">
+
+      <div id="aiStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+
+        <span id="aiStatusText">AI 模型準備中...</span>
+
+      </div>
+
+
+
+      <button id="soundToggleBtn" onclick="toggleMute()" class="p-2.5 bg-slate-700/70 hover:bg-slate-600 rounded-xl border border-slate-600/60 transition text-slate-200">
+
+        <i id="soundIcon" class="ph-bold ph-speaker-high text-xl"></i>
+
+      </button>
+
+
+
+      <button onclick="openHelpModal()" class="p-2.5 bg-slate-700/70 hover:bg-slate-600 rounded-xl border border-slate-600/60 transition text-slate-200" title="遊戲說明">
+
+        <i class="ph-bold ph-question text-xl"></i>
+
+      </button>
+
+    </div>
+
+  </header>
+
+
+
+  <main class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+
+
+
+    <!-- LEFT COLUMN: Game Canvas & HUD (7 cols on lg) -->
+
+    <section class="lg:col-span-7 flex flex-col gap-4">
+
+
+
+      <!-- Top HUD Stats Bar -->
+
+      <div class="grid grid-cols-4 gap-2 md:gap-3">
+
+        <div class="bg-slate-800/90 border border-slate-700/70 rounded-xl p-3 text-center">
+
+          <div class="text-[10px] md:text-xs font-bold uppercase text-slate-400 tracking-wider">SCORE</div>
+
+          <div id="scoreDisplay" class="text-xl md:text-2xl font-black text-amber-400">0</div>
+
+        </div>
+
+        <div class="bg-slate-800/90 border border-slate-700/70 rounded-xl p-3 text-center">
+
+          <div class="text-[10px] md:text-xs font-bold uppercase text-slate-400 tracking-wider">TIME (s)</div>
+
+          <div id="timeDisplay" class="text-xl md:text-2xl font-black text-emerald-400">0s</div>
+
+        </div>
+
+        <div class="bg-slate-800/90 border border-slate-700/70 rounded-xl p-3 text-center">
+
+          <div class="text-[10px] md:text-xs font-bold uppercase text-slate-400 tracking-wider">GRASS 🌿</div>
+
+          <div id="grassDisplay" class="text-xl md:text-2xl font-black text-lime-400">0</div>
+
+        </div>
+
+        <div class="bg-slate-800/90 border border-slate-700/70 rounded-xl p-3 text-center">
+
+          <div class="text-[10px] md:text-xs font-bold uppercase text-slate-400 tracking-wider">STATE</div>
+
+          <div id="stateDisplay" class="text-xs md:text-sm font-extrabold text-cyan-400 mt-1">READY</div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Canvas Viewport with Overlays -->
+
+      <div class="relative w-full rounded-2xl bg-slate-900 border-2 border-slate-700/80 shadow-2xl overflow-hidden flex flex-col items-center justify-center min-h-[380px]">
+
+        <canvas id="gameCanvas" width="540" height="680" class="w-full h-full"></canvas>
+
+
+
+        <!-- START / OVERLAY SCREEN MODAL -->
+
+        <div id="gameOverlayModal" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+
+
+
+          <!-- State 1: Start Game -->
+
+          <div id="startScreenContent" class="flex flex-col items-center max-w-md">
+
+            <div class="text-6xl mb-3 animate-bounce">🐄</div>
+
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-2">準備好開跑了嗎？</h2>
+
+            <p class="text-sm text-slate-300 mb-6 leading-relaxed">
+
+              透過視訊鏡頭做出指定姿勢：<br/>
+
+              <span class="text-amber-300 font-semibold">左歪頭 ⬅️</span> | <span class="text-emerald-300 font-semibold">舉手 ⬆️ (中跑道)</span> | <span class="text-sky-300 font-semibold">右歪頭 ➡️</span><br/>
+
+              避開火焰 🔥 變成牛排 🥩，收集綠草 🌿 拿高分！
+
+            </p>
+
+
+
+              <div class="w-full mb-4 text-left">
+                <label for="gameSpeedSelect" class="block text-sm font-bold text-emerald-200 mb-2">🐢 遊戲速度</label>
+                <select id="gameSpeedSelect" class="w-full bg-slate-800 text-white border border-emerald-500/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                  <option value="slow" selected>慢速（推薦：有約 3 秒反應時間）</option>
+                  <option value="normal">一般速度（熟練後再挑戰）</option>
+                </select>
+              </div>
+
+            <button onclick="startGame()" class="w-full py-4 px-8 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-lg rounded-2xl shadow-lg hover:shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+
+              🚀 開始遊戲 RUN!
+
+            </button>
+
+          </div>
+
+
+
+          <!-- State 2: Game Over Screen -->
+
+          <div id="gameOverContent" class="hidden flex-col items-center max-w-md">
+
+            <div class="relative mb-4">
+
+              <span class="text-7xl block animate-pulse">🥩</span>
+
+              <span class="absolute -top-2 -right-2 text-3xl">🔥</span>
+
+            </div>
+
+            <h2 class="text-3xl font-black text-red-400 mb-1">慘遭烤熟！變成牛排了！</h2>
+
+            <p class="text-xs text-slate-400 mb-4">撞上火焰，遊戲結束！</p>
+
+
+
+            <!-- Final Score Summary Card -->
+
+            <div class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 mb-6 shadow-inner text-left space-y-2">
+
+              <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
+
+                <span class="text-slate-400">存活時間：</span>
+
+                <span id="finalTimeText" class="font-bold text-slate-200">0 秒 (+0分)</span>
+
+              </div>
+
+              <div class="flex justify-between items-center text-sm border-b border-slate-800 pb-2">
+
+                <span class="text-slate-400">青草收集：</span>
+
+                <span id="finalGrassText" class="font-bold text-lime-400">0 份 (+0分)</span>
+
+              </div>
+
+              <div class="flex justify-between items-center text-base pt-1">
+
+                <span class="font-extrabold text-slate-300">總得分 (Total)：</span>
+
+                <span id="finalScoreText" class="text-2xl font-black text-amber-400">0</span>
+
+              </div>
+
+              <div class="text-[11px] text-slate-500 font-mono text-right italic">
+
+                Formula: 存活秒數 + (10 × 青草數)
+
+              </div>
+
+            </div>
+
+
+
+            <button onclick="startGame()" class="w-full py-3.5 px-8 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold text-lg rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5">
+
+              🔄 重新開始 (Try Again)
+
+            </button>
+
+          </div>
+
+
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Manual Simulation Buttons (Backup / Touch Controls) -->
+
+      <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4">
+
+        <div class="flex justify-between items-center mb-3">
+
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">手動模擬控制 / 按鈕備用 (Manual Controls)</span>
+
+          <span class="text-[11px] text-slate-500">也可使用鍵盤 ← / ↑ / →</span>
+
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+
+          <button onclick="simulateMove('Left')" class="py-3 px-2 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-amber-300 border border-amber-500/30 font-bold rounded-xl text-center text-xs md:text-sm transition flex flex-col items-center gap-1">
+
+            <span class="text-lg">👈</span>
+
+            <span>左歪頭</span>
+
+            <span class="text-[10px] font-normal text-slate-400">(左跑道)</span>
+
+          </button>
+
+          <button onclick="simulateMove('Mid')" class="py-3 px-2 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-emerald-300 border border-emerald-500/30 font-bold rounded-xl text-center text-xs md:text-sm transition flex flex-col items-center gap-1">
+
+            <span class="text-lg">🙌</span>
+
+            <span>舉手</span>
+
+            <span class="text-[10px] font-normal text-slate-400">(中跑道)</span>
+
+          </button>
+
+          <button onclick="simulateMove('Right')" class="py-3 px-2 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500 text-sky-300 border border-sky-500/30 font-bold rounded-xl text-center text-xs md:text-sm transition flex flex-col items-center gap-1">
+
+            <span class="text-lg">👉</span>
+
+            <span>右歪頭</span>
+
+            <span class="text-[10px] font-normal text-slate-400">(右跑道)</span>
+
+          </button>
+
+        </div>
+
+      </div>
+
+
+
+    </section>
+
+
+
+    <!-- RIGHT COLUMN: Webcam Preview, AI Pose Detection, Confidence Bars (5 cols on lg) -->
+
+    <section class="lg:col-span-5 flex flex-col gap-4">
+
+
+
+      <!-- Camera Feed Card -->
+
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+
+        <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
+
+          <div class="flex items-center gap-2">
+
+            <i class="ph-bold ph-webcam text-emerald-400 text-lg"></i>
+
+            <h3 class="font-bold text-sm text-slate-200">AI Pose 即時影像辨識</h3>
+            <span id="cameraVersionTag" class="ml-2 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">POSE COMPAT V3</span>
+
+          </div>
+
+          <button id="toggleWebcamBtn" onclick="toggleWebcam()" class="text-xs px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition border border-slate-600">
+
+            開啟鏡頭
+
+          </button>
+
+        </div>
+
+
+
+        <!-- Webcam Container -->
+
+        <div class="relative w-full aspect-square max-h-[430px] mx-auto bg-black/60 rounded-xl overflow-hidden border border-slate-700 flex items-center justify-center">
+
+          <!-- Show the REAL camera video independently of AI inference, so errors never make it black. -->
+          <video id="cameraVideo" autoplay muted playsinline class="hidden absolute inset-0 w-full h-full object-cover" style="transform: scaleX(-1);"></video>
+          <canvas id="poseCanvas" width="300" height="300" class="absolute inset-0 w-full h-full object-cover pointer-events-none"></canvas>
+
+          <!-- Skeleton overlay canvas -->
+
+          <div id="camPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 p-4 text-center">
+
+            <i class="ph-duotone ph-camera-slash text-4xl mb-2 opacity-60"></i>
+
+            <p class="text-xs">點擊「開啟鏡頭」啟用 Teachable Machine AI 姿勢控制</p>
+
+          </div>
+
+
+
+          <div id="cameraErrorText" class="hidden absolute bottom-2 left-2 right-2 px-3 py-2 text-xs rounded-lg bg-red-950/90 border border-red-400/50 text-red-200 z-10 break-words"></div>
+
+          <!-- Active Target Lane Overlay Badge -->
+
+          <div class="absolute top-2 left-2 bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-md border border-slate-700 text-[11px] flex items-center gap-1.5 font-mono">
+
+            <span class="text-slate-400">目前跑道:</span>
+
+            <span id="activeLaneBadge" class="font-bold text-emerald-400">MIDDLE (中)</span>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Debounce & Pose Lock Progress Indicator -->
+
+        <div class="space-y-1">
+
+          <div class="flex justify-between text-[11px] text-slate-400">
+
+            <span>姿勢鎖定判定 (0.2s 穩定度)</span>
+
+            <span id="debounceValueText" class="font-mono text-emerald-400">HOLD</span>
+
+          </div>
+
+          <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-700/50">
+
+            <div id="debounceProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-300 w-0 progress-bar"></div>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Realtime Confidence Bars -->
+
+        <div class="space-y-2 mt-1">
+
+          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">模型預測概率 (Probabilities)</div>
+
+
+
+          <!-- Left Bar -->
+
+          <div class="space-y-0.5">
+
+            <div class="flex justify-between text-xs font-semibold">
+
+              <span class="text-amber-300 flex items-center gap-1">
+
+                <span>👈 Left (歪左頭)</span>
+
+              </span>
+
+              <span id="probLeftText" class="font-mono text-slate-300">0%</span>
+
+            </div>
+
+            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden">
+
+              <div id="probLeftBar" class="h-full bg-amber-400 transition-all duration-75 w-0"></div>
+
+            </div>
+
+          </div>
+
+
+
+          <!-- Mid Bar -->
+
+          <div class="space-y-0.5">
+
+            <div class="flex justify-between text-xs font-semibold">
+
+              <span class="text-emerald-300 flex items-center gap-1">
+
+                <span>🙌 Mid (正直+舉手)</span>
+
+              </span>
+
+              <span id="probMidText" class="font-mono text-slate-300">0%</span>
+
+            </div>
+
+            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden">
+
+              <div id="probMidBar" class="h-full bg-emerald-400 transition-all duration-75 w-0"></div>
+
+            </div>
+
+          </div>
+
+
+
+          <!-- Right Bar -->
+
+          <div class="space-y-0.5">
+
+            <div class="flex justify-between text-xs font-semibold">
+
+              <span class="text-sky-300 flex items-center gap-1">
+
+                <span>👉 Right (歪右頭)</span>
+
+              </span>
+
+              <span id="probRightText" class="font-mono text-slate-300">0%</span>
+
+            </div>
+
+            <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden">
+
+              <div id="probRightBar" class="h-full bg-sky-400 transition-all duration-75 w-0"></div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- Teachable Machine Model Config Box -->
+
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-xl space-y-3">
+
+        <div class="flex items-center gap-2 border-b border-slate-700/60 pb-2">
+
+          <i class="ph-bold ph-cpu text-amber-400 text-lg"></i>
+
+          <h3 class="font-bold text-sm text-slate-200">Teachable Machine 模型設定</h3>
+
+        </div>
+
+
+
+        <div class="space-y-1.5">
+
+          <label for="modelUrlInput" class="text-xs font-medium text-slate-400">模型網址 (Model URL):</label>
+
+          <div class="flex gap-2">
+
+            <input id="modelUrlInput" type="text" value="https://teachablemachine.withgoogle.com/models/OfpZ8VWq4/"&#x20;
+
+              class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-emerald-500 transition" />
+
+            <button onclick="reloadCustomModel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow">
+
+              載入
+
+            </button>
+
+          </div>
+
+          <p class="text-[10px] text-slate-500">預設套用專屬 trained model URL (`OfpZ8VWq4`)</p>
+
+        </div>
+
+
+
+        <!-- Rules Info Note -->
+
+        <div class="bg-slate-900/60 rounded-xl p-3 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+
+          <div class="font-bold text-emerald-400 flex items-center gap-1">
+
+            <i class="ph-bold ph-lightbulb"></i> 姿勢控制規則說明：
+
+          </div>
+
+          <ul class="list-disc list-inside text-slate-400 space-y-0.5">
+
+            <li><strong>Left：</strong>頭向左歪 ➔ 切換至左跑道。</li>
+
+            <li><strong>Mid：</strong>頭保持正直 + <strong>舉手</strong> ➔ 回中間跑道。</li>
+
+            <li><strong>Right：</strong>頭向右歪 ➔ 切換至右跑道。</li>
+
+            <li class="text-amber-300/90 font-medium">注意：沒舉手時放平頭部會維持當前跑道，不會自動跳回中間！</li>
+
+          </ul>
+
+        </div>
+
+      </div>
+
+
+
+    </section>
+
+  </main>
+
+
+
+  <!-- Help Modal -->
+
+  <div id="helpModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+
+      <button onclick="closeHelpModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl">
+
+        <i class="ph-bold ph-x"></i>
+
+      </button>
+
+      <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
+
+        📖 遊戲規則與公平性設計
+
+      </h3>
+
+      <div class="text-sm text-slate-300 space-y-2.5 leading-relaxed">
+
+        <p>1. <strong>跑道機制：</strong>三條跑道（左、中、右），牛牛從中間自動往前奔跑。</p>
+
+        <p>2. <strong>防塞死機制：</strong>每一排障礙物最多只會出現 2 個火焰 🔥，絕對保證至少有 1 條安全通道！</p>
+
+        <p>3. <strong>姿勢穩定判定 (0.2s):</strong> 姿勢必須連續穩定維持 200 毫秒才會觸發切換，避免誤判造成牛牛亂跑。</p>
+
+        <p>4. <strong>動態難度：</strong>預設慢速；每存活 30 秒才小幅加快，且有最高速度限制。</p>
+
+        <p>5. <strong>計分方式：</strong><br/>
+
+          <span class="font-mono bg-slate-900 px-2 py-1 rounded border border-slate-700 text-amber-300 block mt-1">
+
+            Total Score = 存活秒數 + (10 × 青草數量)
+
+          </span>
+
+        </p>
+
+      </div>
+
+      <button onclick="closeHelpModal()" class="w-full mt-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition">
+
+        我知道了
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+
+  <script>
+
+    /* =========================================================================
+
+     *  AUDIO SYNTHESIZER (Web Audio API - No external asset dependency)
+
+     * ========================================================================= */
+
+    let audioCtx = null;
+
+    let isMuted = false;
+
+
+
+    function initAudio() {
+
+      if (!audioCtx) {
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+        audioCtx = new AudioContext();
+
+      }
+
+      if (audioCtx.state === 'suspended') {
+
+        audioCtx.resume();
+
+      }
+
+    }
+
+
+
+    function toggleMute() {
+
+      isMuted = !isMuted;
+
+      const icon = document.getElementById('soundIcon');
+
+      if (isMuted) {
+
+        icon.className = 'ph-bold ph-speaker-slash text-xl text-red-400';
+
+      } else {
+
+        icon.className = 'ph-bold ph-speaker-high text-xl text-slate-200';
+
+      }
+
+    }
+
+
+
+    // Play tone helper
+
+    function playTone(freq, type, duration, vol = 0.1) {
+
+      if (isMuted) return;
+
+      try {
+
+        initAudio();
+
+        const osc = audioCtx.createOscillator();
+
+        const gain = audioCtx.createGain();
+
+        osc.type = type;
+
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+        osc.connect(gain);
+
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+
+        osc.stop(audioCtx.currentTime + duration);
+
+      } catch (e) {}
+
+    }
+
+
+
+    function playGrassSound() {
+
+      if (isMuted) return;
+
+      playTone(523.25, 'sine', 0.1, 0.15); // C5
+
+      setTimeout(() => playTone(659.25, 'sine', 0.15, 0.15), 60); // E5
+
+      setTimeout(() => playTone(783.99, 'sine', 0.2, 0.2), 120); // G5
+
+    }
+
+
+
+    function playMoveSound() {
+
+      if (isMuted) return;
+
+      playTone(300, 'triangle', 0.08, 0.08);
+
+    }
+
+
+
+    function playGameOverSound() {
+
+      if (isMuted) return;
+
+      playTone(350, 'sawtooth', 0.2, 0.2);
+
+      setTimeout(() => playTone(280, 'sawtooth', 0.2, 0.2), 150);
+
+      setTimeout(() => playTone(200, 'sawtooth', 0.4, 0.25), 300);
+
+    }
+
+
+
+    /* =========================================================================
+
+     *  GAME STATE & CONSTANTS
+
+     * ========================================================================= */
+
+    const CANVAS_WIDTH = 540;
+
+    const CANVAS_HEIGHT = 680;
+
+
+
+    // Lanes X centers
+
+    const LANES = [110, 270, 430]; // Left (0), Mid (1), Right (2)
+
+    const LANE_NAMES = ['LEFT', 'MIDDLE', 'RIGHT'];
+
+    // 速度調整（預設慢速）: values are pixels per 60fps reference frame.
+    // Slow = ~3.3s from spawn to collision; Normal = ~2.2s.
+    const SPEED_PRESETS = {
+      slow: { base: 1.7, step: 0.15, max: 2.7, waveSeconds: 2.7 },
+      normal: { base: 2.6, step: 0.25, max: 3.8, waveSeconds: 2.3 }
+    };
+    const SPEED_UP_EVERY_SECONDS = 30;
+    let chosenSpeed = SPEED_PRESETS.slow;
+    let spawnElapsed = 0;
+    let animationFrameId = null;
+    let gameOverAt = 0;
+
+
+
+    // Game variables
+
+    let gameActive = false;
+
+    let score = 0;
+
+    let survivalSeconds = 0;
+
+    let grassCount = 0;
+
+    let gameSpeed = chosenSpeed.base; // Default: slow (1.7 per 60fps frame)
+
+    let speedLevel = 1;
+
+    let lastTime = 0;
+
+    let timeTimer = null;
+
+    let gameFrame = 0;
+
+
+
+    // Player Cow Object
+
+    const cow = {
+
+      lane: 1, // Start at Mid (1)
+
+      x: LANES[1],
+
+      targetX: LANES[1],
+
+      y: 540,
+
+      radius: 36,
+
+      bounceY: 0,
+
+      isSteak: false,
+
+      rotation: 0
+
+    };
+
+
+
+    // Obstacles & Collectibles
+
+    let entities = []; // { id, lane, x, y, type: 'flame'|'grass', collected: false }
+
+    let particles = [];
+
+
+
+    // Horizon perspective constants
+
+    const horizonY = 160;
+
+
+
+    /* =========================================================================
+
+     *  TEACHABLE MACHINE & POSE DETECTION CONTROL
+
+     * ========================================================================= */
+
+    let model = null;
+
+    // Use native getUserMedia + visible <video> rather than a hidden TM webcam canvas.
+    // The image remains visible even if model inference throws.
+    const CAMERA_SIZE = 300;
+    const cameraVideo = document.getElementById('cameraVideo');
+    const modelInputCanvas = document.createElement('canvas');
+    modelInputCanvas.width = CAMERA_SIZE;
+    modelInputCanvas.height = CAMERA_SIZE;
+    const modelInputCtx = modelInputCanvas.getContext('2d');
+    let cameraStream = null;
+    let cameraFrameId = null;
+    let cameraSession = 0;
+    let cameraToggleBusy = false;
+    let poseCtx = null;
+    let isWebcamActive = false;
+    let inferErrorShown = false;
+
+    let currentPose = 'Mid'; // Default starting active lane pose
+
+    let pendingPose = null;
+
+    let poseHoldStartTime = 0;
+
+    const DEBOUNCE_TIME = 200; // 0.2 seconds required stability
+
+    const CONFIDENCE_THRESHOLD = 0.70;
+
+
+
+    // UI Elements
+
+    const canvas = document.getElementById('gameCanvas');
+
+    const ctx = canvas.getContext('2d');
+
+    const poseCanvas = document.getElementById('poseCanvas');
+
+
+
+    async function loadTeachableMachineModel(customUrl) {
+
+      const statusBadge = document.getElementById('aiStatusBadge');
+
+      const statusText = document.getElementById('aiStatusText');
+
+
+
+      let baseUrl = customUrl || 'https://teachablemachine.withgoogle.com/models/OfpZ8VWq4/';
+
+      if (!baseUrl.endsWith('/')) baseUrl += '/';
+
+
+
+      const modelURL = baseUrl + 'model.json';
+
+      const metadataURL = baseUrl + 'metadata.json';
+
+
+
+      statusBadge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30";
+
+      statusText.textContent = "載入 AI 模型中...";
+
+
+
+      try {
+
+        model = await tmPose.load(modelURL, metadataURL);
+
+        statusBadge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+
+        statusText.textContent = "AI 模型就緒 (Ready)";
+
+        console.log("Teachable Machine Pose Model loaded successfully!");
+
+      } catch (err) {
+
+        console.error("Failed to load TM Pose model:", err);
+
+        statusBadge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/30";
+
+        statusText.textContent = "模型載入失敗";
+
+      }
+
+    }
+
+
+
+    function showCameraError(message) {
+      const el = document.getElementById('cameraErrorText');
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+
+    function hideCameraError() {
+      const el = document.getElementById('cameraErrorText');
+      el.textContent = '';
+      el.classList.add('hidden');
+    }
+
+    function stopCamera() {
+      cameraSession++;
+      isWebcamActive = false;
+      if (cameraFrameId !== null) {
+        cancelAnimationFrame(cameraFrameId);
+        cameraFrameId = null;
+      }
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+      cameraVideo.pause();
+      cameraVideo.srcObject = null;
+      cameraVideo.classList.add('hidden');
+      document.getElementById('camPlaceholder').classList.remove('hidden');
+      document.getElementById('toggleWebcamBtn').textContent = '開啟鏡頭';
+      if (poseCtx) poseCtx.clearRect(0, 0, CAMERA_SIZE, CAMERA_SIZE);
+      updateConfidenceUI({ Left: 0, Mid: 0, Right: 0 });
+      hideCameraError();
+    }
+
+    async function toggleWebcam() {
+      if (cameraToggleBusy) return;
+      cameraToggleBusy = true;
+      const btn = document.getElementById('toggleWebcamBtn');
+      try {
+        if (isWebcamActive) {
+          stopCamera();
+          return;
+        }
+        if (!model) {
+          showCameraError('AI 模型還沒載入完成，請先確認模型網址與網路連線。');
+          return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showCameraError('瀏覽器不支援或未授權攝影機。請用 Chrome 開啟 localhost 網頁並確認相機權限。');
+          return;
+        }
+        hideCameraError();
+        btn.textContent = '啟動中...';
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+        if (!cameraVideo.videoWidth || !cameraVideo.videoHeight) {
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('相機未產生影像，請關閉其他占用攝影機的程式。')), 4000);
+            cameraVideo.addEventListener('loadeddata', () => { clearTimeout(timer); resolve(); }, { once: true });
+          });
+        }
+        const canvas = document.getElementById('poseCanvas');
+        canvas.width = CAMERA_SIZE;
+        canvas.height = CAMERA_SIZE;
+        poseCtx = canvas.getContext('2d');
+        inferErrorShown = false;
+        isWebcamActive = true;
+        cameraSession++;
+        cameraVideo.classList.remove('hidden');
+        document.getElementById('camPlaceholder').classList.add('hidden');
+        btn.textContent = '關閉鏡頭';
+        cameraFrameId = requestAnimationFrame(() => webcamLoop(cameraSession));
+      } catch (err) {
+        console.error('Camera startup failed:', err);
+        stopCamera();
+        const cameraHint = err.name === 'NotAllowedError'
+          ? '攝影機權限遭拒，請點網址列左邊的網站設定允許相機。'
+          : err.name === 'NotFoundError'
+          ? '找不到攝影機，請檢查鏡頭是否已連接。'
+          : '鏡頭開啟失敗：' + (err.message || String(err));
+        showCameraError(cameraHint);
+      } finally {
+        cameraToggleBusy = false;
+        if (!isWebcamActive) btn.textContent = '開啟鏡頭';
+      }
+    }
+
+    async function reloadCustomModel() {
+
+      const inputUrl = document.getElementById('modelUrlInput').value.trim();
+
+      if (inputUrl) {
+
+        await loadTeachableMachineModel(inputUrl);
+
+      }
+
+    }
+
+
+
+    async function webcamLoop(session) {
+      if (!isWebcamActive || session !== cameraSession) return;
+      try {
+        // Render the camera BEFORE inference, not after; mirrored just like TM webcam.
+        if (cameraVideo.readyState >= 2 && cameraVideo.videoWidth > 0) {
+          const w = cameraVideo.videoWidth;
+          const h = cameraVideo.videoHeight;
+          const crop = Math.min(w, h);
+          modelInputCtx.save();
+          modelInputCtx.translate(CAMERA_SIZE, 0);
+          modelInputCtx.scale(-1, 1);
+          modelInputCtx.drawImage(cameraVideo, (w - crop) / 2, (h - crop) / 2,
+              crop, crop, 0, 0, CAMERA_SIZE, CAMERA_SIZE);
+          modelInputCtx.restore();
+          await predictPose();
+          if (inferErrorShown) {
+            hideCameraError();
+            inferErrorShown = false;
+            document.getElementById('aiStatusText').textContent = 'AI 模型就緒 (Ready)';
+          }
+        }
+      } catch (err) {
+        // Keep the video and loop alive when one inference frame fails.
+        if (!inferErrorShown) console.error('AI pose inference failed:', err);
+        inferErrorShown = true;
+        showCameraError('鏡頭已開啟，但 AI 辨識失敗：' + (err.message || String(err)));
+        document.getElementById('aiStatusText').textContent = 'AI 辨識異常（鏡頭正常）';
+      } finally {
+        if (isWebcamActive && session === cameraSession) {
+          cameraFrameId = requestAnimationFrame(() => webcamLoop(session));
+        }
+      }
+    }
+
+    async function predictPose() {
+      if (!model || !isWebcamActive) return;
+      const { pose, posenetOutput } = await model.estimatePose(modelInputCanvas);
+      const prediction = await model.predict(posenetOutput);
+
+      // Pose skeleton is an overlay only; the live video stays independently visible.
+      if (poseCtx) {
+        poseCtx.clearRect(0, 0, CAMERA_SIZE, CAMERA_SIZE);
+        if (pose && pose.keypoints) {
+          const minPartConfidence = 0.5;
+          tmPose.drawKeypoints(pose.keypoints, minPartConfidence, poseCtx);
+          tmPose.drawSkeleton(pose.keypoints, minPartConfidence, poseCtx);
+        }
+      }
+
+      // Map predictions to probabilities
+
+      let probMap = { 'Left': 0, 'Mid': 0, 'Right': 0 };
+
+
+
+      prediction.forEach(p => {
+
+        const name = p.className.trim();
+
+        const label = name.toLowerCase();
+        if (label.includes('left') || name.includes('左')) probMap['Left'] = p.probability;
+        else if (label.includes('mid') || label.includes('center') || label.includes('centre') || name.includes('中')) probMap['Mid'] = p.probability;
+        else if (label.includes('right') || name.includes('右')) probMap['Right'] = p.probability;
+
+      });
+
+
+
+      // Surface unmatched class names, instead of silently displaying three 0% bars.
+      if (prediction.length && Object.values(probMap).every(v => v === 0)) {
+        showCameraError('模型類別名稱無法對應 Left / Mid / Right：' +
+          prediction.map(p => p.className).join(', ') + '。請檢查訓練時的 Class 名稱。');
+      }
+      // Update UI Confidence Bars
+      updateConfidenceUI(probMap);
+
+
+
+      // Find top detected action above threshold
+
+      let detectedPose = null;
+
+      if (probMap['Left'] > CONFIDENCE_THRESHOLD) detectedPose = 'Left';
+
+      else if (probMap['Mid'] > CONFIDENCE_THRESHOLD) detectedPose = 'Mid';
+
+      else if (probMap['Right'] > CONFIDENCE_THRESHOLD) detectedPose = 'Right';
+
+
+
+      // Hysteresis / Debounce logic (0.2 seconds requirement)
+
+      const now = performance.now();
+
+      const progressBar = document.getElementById('debounceProgressBar');
+
+      const valueText = document.getElementById('debounceValueText');
+
+
+
+      if (detectedPose && detectedPose !== currentPose) {
+
+        if (pendingPose !== detectedPose) {
+
+          pendingPose = detectedPose;
+
+          poseHoldStartTime = now;
+
+        }
+
+
+
+        const elapsed = now - poseHoldStartTime;
+
+        const progress = Math.min(1.0, elapsed / DEBOUNCE_TIME);
+
+
+
+        progressBar.style.width = `${progress * 100}%`;
+
+        valueText.textContent = `切換至 ${detectedPose} (${Math.round(progress * 100)}%)`;
+
+
+
+        if (elapsed >= DEBOUNCE_TIME) {
+
+          // Confirm Lane Switch!
+
+          applyLaneSwitch(detectedPose);
+
+          pendingPose = null;
+
+          progressBar.style.width = '0%';
+
+          valueText.textContent = 'HOLD';
+
+        }
+
+      } else {
+
+        // Reset pending pose check
+
+        pendingPose = null;
+
+        progressBar.style.width = '0%';
+
+        valueText.textContent = 'HOLD';
+
+      }
+
+    }
+
+
+
+    function updateConfidenceUI(probMap) {
+
+      document.getElementById('probLeftText').textContent = `${Math.round(probMap['Left'] * 100)}%`;
+
+      document.getElementById('probLeftBar').style.width = `${probMap['Left'] * 100}%`;
+
+
+
+      document.getElementById('probMidText').textContent = `${Math.round(probMap['Mid'] * 100)}%`;
+
+      document.getElementById('probMidBar').style.width = `${probMap['Mid'] * 100}%`;
+
+
+
+      document.getElementById('probRightText').textContent = `${Math.round(probMap['Right'] * 100)}%`;
+
+      document.getElementById('probRightBar').style.width = `${probMap['Right'] * 100}%`;
+
+    }
+
+
+
+    function applyLaneSwitch(newPose) {
+
+      if (currentPose === newPose) return;
+
+      currentPose = newPose;
+
+
+
+      let targetLaneIndex = cow.lane;
+
+      if (newPose === 'Left') targetLaneIndex = 0;
+
+      else if (newPose === 'Mid') targetLaneIndex = 1;
+
+      else if (newPose === 'Right') targetLaneIndex = 2;
+
+
+
+      if (cow.lane !== targetLaneIndex) {
+
+        cow.lane = targetLaneIndex;
+
+        cow.targetX = LANES[cow.lane];
+
+        playMoveSound();
+
+
+
+        // Active Lane UI update
+
+        const badge = document.getElementById('activeLaneBadge');
+
+        badge.textContent = `${LANE_NAMES[cow.lane]} (${cow.lane === 0 ? '左' : cow.lane === 1 ? '中' : '右'})`;
+
+      }
+
+    }
+
+
+
+    // Manual Simulate button handler
+
+    function simulateMove(poseName) {
+
+      applyLaneSwitch(poseName);
+
+    }
+
+
+
+    // Keyboard Arrow Controls
+
+    window.addEventListener('keydown', (e) => {
+
+      if (!gameActive) return;
+
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+
+        simulateMove('Left');
+
+      } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === 's' || e.key === 'S') {
+
+        simulateMove('Mid');
+
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+
+        simulateMove('Right');
+
+      }
+
+    });
+
+
+
+    /* =========================================================================
+
+     *  GAME LOOP & RENDERING ENGINE
+
+     * ========================================================================= */
+
+    function startGame() {
+
+      initAudio();
+
+      document.getElementById('gameOverlayModal').classList.add('hidden');
+
+      document.getElementById('startScreenContent').classList.add('hidden');
+
+      document.getElementById('gameOverContent').classList.add('hidden');
+
+
+
+      // Reset Variables
+
+      gameActive = true;
+
+      score = 0;
+
+      survivalSeconds = 0;
+
+      grassCount = 0;
+
+      const speedKey = document.getElementById('gameSpeedSelect').value;
+      chosenSpeed = SPEED_PRESETS[speedKey] || SPEED_PRESETS.slow;
+      gameSpeed = chosenSpeed.base;
+      // First wave appears after 1.25 seconds, giving the player time to prepare.
+      spawnElapsed = chosenSpeed.waveSeconds - 1.25;
+      gameOverAt = 0;
+      // Prevent stacked requestAnimationFrame loops after restart.
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+
+      speedLevel = 1;
+
+      gameFrame = 0;
+
+
+
+      cow.lane = 1; // Middle lane
+
+      cow.x = LANES[1];
+
+      cow.targetX = LANES[1];
+
+      cow.isSteak = false;
+
+      cow.rotation = 0;
+
+
+
+      entities = [];
+
+      particles = [];
+
+
+
+      document.getElementById('stateDisplay').textContent = "RUNNING";
+
+      document.getElementById('stateDisplay').className = "text-xs md:text-sm font-extrabold text-emerald-400 mt-1";
+
+      updateScoreboard();
+
+
+
+      // Start survival timer
+
+      if (timeTimer) clearInterval(timeTimer);
+
+      timeTimer = setInterval(() => {
+
+        if (!gameActive) return;
+
+        survivalSeconds++;
+
+
+
+        // Gentler acceleration every 30 seconds; speed is capped.
+
+        if (survivalSeconds % SPEED_UP_EVERY_SECONDS === 0) {
+
+          gameSpeed = Math.min(chosenSpeed.max, gameSpeed + chosenSpeed.step);
+
+          speedLevel++;
+
+        }
+
+
+
+        calculateScore();
+
+        updateScoreboard();
+
+      }, 1000);
+
+
+
+      lastTime = performance.now();
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+
+    }
+
+
+
+    function calculateScore() {
+
+      // Total Score = Survival Seconds + 10 * Grass Count
+
+      score = survivalSeconds + (10 * grassCount);
+
+    }
+
+
+
+    function updateScoreboard() {
+
+      document.getElementById('scoreDisplay').textContent = score;
+
+      document.getElementById('timeDisplay').textContent = `${survivalSeconds}s`;
+
+      document.getElementById('grassDisplay').textContent = grassCount;
+
+    }
+
+
+
+    function triggerGameOver() {
+
+      if (!gameActive) return;
+      gameOverAt = performance.now();
+      gameActive = false;
+
+      cow.isSteak = true;
+
+      playGameOverSound();
+
+
+
+      if (timeTimer) clearInterval(timeTimer);
+
+
+
+      document.getElementById('stateDisplay').textContent = "GAME OVER";
+
+      document.getElementById('stateDisplay').className = "text-xs md:text-sm font-extrabold text-red-400 mt-1";
+
+
+
+      // Spawn Explosion Particles
+
+      createExplosion(cow.x, cow.y);
+
+
+
+      setTimeout(() => {
+
+        document.getElementById('finalTimeText').textContent = `${survivalSeconds} 秒 (+${survivalSeconds}分)`;
+
+        document.getElementById('finalGrassText').textContent = `${grassCount} 份 (+${grassCount * 10}分)`;
+
+        document.getElementById('finalScoreText').textContent = score;
+
+
+
+        document.getElementById('startScreenContent').classList.add('hidden');
+
+        document.getElementById('gameOverContent').classList.remove('hidden');
+
+        document.getElementById('gameOverContent').classList.add('flex');
+
+        document.getElementById('gameOverlayModal').classList.remove('hidden');
+
+      }, 800);
+
+    }
+
+
+
+    /* Spawn Row Waves with Fairness Rule (Max 2 flames per row) */
+
+    function spawnObstacleWave() {
+
+      // Choose pattern: 1 flame, 2 flames, or grass
+
+      const lanesAvailable = [0, 1, 2];
+
+
+
+      // Shuffle lanes
+
+      lanesAvailable.sort(() => Math.random() - 0.5);
+
+
+
+      // Pick flame count: 1 or 2 (NEVER 3!)
+
+      const flameCount = Math.random() < 0.65 ? 1 : 2;
+
+
+
+      // Spawn Flames
+
+      for (let i = 0; i < flameCount; i++) {
+
+        const laneIdx = lanesAvailable.pop();
+
+        entities.push({
+
+          id: Math.random(),
+
+          lane: laneIdx,
+
+          x: LANES[laneIdx],
+
+          y: horizonY - 20,
+
+          type: 'flame',
+
+          radius: 28,
+
+          scale: 0.3
+
+        });
+
+      }
+
+
+
+      // 60% chance to spawn Grass in one remaining open lane
+
+      if (lanesAvailable.length > 0 && Math.random() < 0.6) {
+
+        const grassLane = lanesAvailable.pop();
+
+        entities.push({
+
+          id: Math.random(),
+
+          lane: grassLane,
+
+          x: LANES[grassLane],
+
+          y: horizonY - 20,
+
+          type: 'grass',
+
+          radius: 24,
+
+          collected: false,
+
+          scale: 0.3
+
+        });
+
+      }
+
+    }
+
+
+
+    function gameLoop(now) {
+
+      // Use elapsed time, not just frame count: consistent speed on 30/60/120Hz screens.
+      const dt = Math.max(0, Math.min((now - lastTime) / 1000, 0.05));
+      lastTime = now;
+      const frameFactor = dt * 60;
+      gameFrame++;
+
+
+
+      // Clear Canvas
+
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+
+
+      // 1. Draw Environment & 3D Perspective Track
+
+      drawTrack();
+
+
+
+      if (gameActive) {
+
+        // Time-based spawning prevents faster monitors from spawning extra fire.
+        spawnElapsed += dt;
+        if (spawnElapsed >= chosenSpeed.waveSeconds) {
+          spawnElapsed -= chosenSpeed.waveSeconds;
+          spawnObstacleWave();
+        }
+
+        // Frame-rate independent lane smoothing
+        cow.x += (cow.targetX - cow.x) * (1 - Math.pow(0.78, frameFactor));
+
+        cow.bounceY = Math.abs(Math.sin(gameFrame * 0.25)) * 12; // Bounce running effect
+
+      }
+
+
+
+      // 2. Update & Draw Entities (Flames & Grass)
+
+      for (let i = entities.length - 1; i >= 0; i--) {
+
+        const e = entities[i];
+
+
+
+        if (gameActive) {
+
+          e.y += gameSpeed * frameFactor;
+
+          // Scale up as item gets closer to bottom
+
+          const progress = (e.y - horizonY) / (CANVAS_HEIGHT - horizonY);
+
+          e.scale = 0.3 + progress * 0.85;
+
+
+
+          // Collision Detection with Cow
+
+          if (e.y > 480 && e.y < 580 && e.lane === cow.lane) {
+
+            if (e.type === 'flame') {
+
+              triggerGameOver();
+
+            } else if (e.type === 'grass' && !e.collected) {
+
+              e.collected = true;
+
+              grassCount++;
+
+              calculateScore();
+
+              updateScoreboard();
+
+              playGrassSound();
+
+              createGrassCollectParticles(e.x, e.y);
+
+            }
+
+          }
+
+        }
+
+
+
+        // Draw Entity
+
+        drawEntity(e);
+
+
+
+        // Remove offscreen
+
+        if (e.y > CANVAS_HEIGHT + 60 || e.collected) {
+
+          entities.splice(i, 1);
+
+        }
+
+      }
+
+
+
+      // 3. Update & Draw Particles
+
+      updateAndDrawParticles();
+
+
+
+      // 4. Draw Cow / Steak Character
+
+      drawCow();
+
+
+
+      if (gameActive || (cow.isSteak && now - gameOverAt < 850)) {
+        animationFrameId = requestAnimationFrame(gameLoop);
+      } else {
+        animationFrameId = null;
+      }
+
+    }
+
+
+
+    /* Draw Track with Moving Perspective Lines */
+
+    function drawTrack() {
+
+      // Grass sides
+
+      ctx.fillStyle = '#1e3a29';
+
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+
+
+      // Horizon Sky gradient
+
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
+
+      skyGradient.addColorStop(0, '#0f172a');
+
+      skyGradient.addColorStop(1, '#1e293b');
+
+      ctx.fillStyle = skyGradient;
+
+      ctx.fillRect(0, 0, CANVAS_WIDTH, horizonY);
+
+
+
+      // Track Road Surface
+
+      ctx.beginPath();
+
+      ctx.moveTo(180, horizonY);
+
+      ctx.lineTo(360, horizonY);
+
+      ctx.lineTo(520, CANVAS_HEIGHT);
+
+      ctx.lineTo(20, CANVAS_HEIGHT);
+
+      ctx.closePath();
+
+      ctx.fillStyle = '#334155';
+
+      ctx.fill();
+
+      ctx.lineWidth = 4;
+
+      ctx.strokeStyle = '#475569';
+
+      ctx.stroke();
+
+
+
+      // Lane Line Dividers
+
+      const offset = (gameFrame * gameSpeed * 1.5) % 60;
+
+
+
+      ctx.strokeStyle = '#cbd5e1';
+
+      ctx.lineWidth = 3;
+
+      ctx.setLineDash([20, 20]);
+
+      ctx.lineDashOffset = -offset;
+
+
+
+      // Divider 1 (Left-Mid)
+
+      ctx.beginPath();
+
+      ctx.moveTo(240, horizonY);
+
+      ctx.lineTo(190, CANVAS_HEIGHT);
+
+      ctx.stroke();
+
+
+
+      // Divider 2 (Mid-Right)
+
+      ctx.beginPath();
+
+      ctx.moveTo(300, horizonY);
+
+      ctx.lineTo(350, CANVAS_HEIGHT);
+
+      ctx.stroke();
+
+
+
+      ctx.setLineDash([]); // reset dash
+
+
+
+      // Horizon line glow
+
+      ctx.beginPath();
+
+      ctx.moveTo(0, horizonY);
+
+      ctx.lineTo(CANVAS_WIDTH, horizonY);
+
+      ctx.strokeStyle = '#4ade80';
+
+      ctx.lineWidth = 2;
+
+      ctx.stroke();
+
+    }
+
+
+
+    function drawEntity(e) {
+
+      ctx.save();
+
+      ctx.translate(e.x, e.y);
+
+      ctx.scale(e.scale, e.scale);
+
+
+
+      if (e.type === 'flame') {
+
+        // Draw Flame 🔥
+
+        ctx.font = '54px sans-serif';
+
+        ctx.textAlign = 'center';
+
+        ctx.textBaseline = 'middle';
+
+
+
+        // Pulse flicker
+
+        const flicker = Math.sin(gameFrame * 0.3) * 4;
+
+        ctx.fillText('🔥', 0, flicker);
+
+
+
+        // Flame shadow base
+
+        ctx.beginPath();
+
+        ctx.ellipse(0, 25, 20, 8, 0, 0, Math.PI * 2);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+
+        ctx.fill();
+
+      } else if (e.type === 'grass') {
+
+        // Draw Grass 🌿
+
+        ctx.font = '48px sans-serif';
+
+        ctx.textAlign = 'center';
+
+        ctx.textBaseline = 'middle';
+
+        ctx.fillText('🌿', 0, 0);
+
+
+
+        // Sparkle ring around grass
+
+        ctx.beginPath();
+
+        ctx.arc(0, 0, 28, 0, Math.PI * 2);
+
+        ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+
+        ctx.lineWidth = 2;
+
+        ctx.stroke();
+
+      }
+
+
+
+      ctx.restore();
+
+    }
+
+
+
+    function drawCow() {
+
+      ctx.save();
+
+      ctx.translate(cow.x, cow.y - cow.bounceY);
+
+
+
+      if (!cow.isSteak) {
+
+        // Shadow underneath
+
+        ctx.beginPath();
+
+        ctx.ellipse(0, 30 + cow.bounceY, 28, 10, 0, 0, Math.PI * 2);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+
+        ctx.fill();
+
+
+
+        // Cow Character 🐄
+
+        ctx.font = '64px sans-serif';
+
+        ctx.textAlign = 'center';
+
+        ctx.textBaseline = 'middle';
+
+
+
+        // Slight tilt when moving lanes
+
+        const tilt = (cow.targetX - cow.x) * 0.05;
+
+        ctx.rotate(tilt * Math.PI / 180);
+
+
+
+        ctx.fillText('🐄', 0, 0);
+
+      } else {
+
+        // Cooked Steak 🥩 (Game Over Transformation)
+
+        ctx.font = '72px sans-serif';
+
+        ctx.textAlign = 'center';
+
+        ctx.textBaseline = 'middle';
+
+        ctx.fillText('🥩', 0, 0);
+
+      }
+
+
+
+      ctx.restore();
+
+    }
+
+
+
+    /* Particle Effects System */
+
+    function createGrassCollectParticles(x, y) {
+
+      for (let i = 0; i < 12; i++) {
+
+        particles.push({
+
+          x: x,
+
+          y: y,
+
+          vx: (Math.random() - 0.5) * 8,
+
+          vy: (Math.random() - 0.5) * 8,
+
+          color: '#4ade80',
+
+          radius: Math.random() * 4 + 3,
+
+          alpha: 1.0,
+
+          text: '+10'
+
+        });
+
+      }
+
+    }
+
+
+
+    function createExplosion(x, y) {
+
+      for (let i = 0; i < 20; i++) {
+
+        particles.push({
+
+          x: x,
+
+          y: y,
+
+          vx: (Math.random() - 0.5) * 12,
+
+          vy: (Math.random() - 0.5) * 12,
+
+          color: Math.random() < 0.5 ? '#f97316' : '#ef4444',
+
+          radius: Math.random() * 6 + 4,
+
+          alpha: 1.0
+
+        });
+
+      }
+
+    }
+
+
+
+    function updateAndDrawParticles() {
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+
+        const p = particles[i];
+
+        p.x += p.vx;
+
+        p.y += p.vy;
+
+        p.alpha -= 0.03;
+
+
+
+        if (p.alpha <= 0) {
+
+          particles.splice(i, 1);
+
+          continue;
+
+        }
+
+
+
+        ctx.save();
+
+        ctx.globalAlpha = p.alpha;
+
+        ctx.fillStyle = p.color;
+
+        ctx.beginPath();
+
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+
+        ctx.fill();
+
+        ctx.restore();
+
+      }
+
+    }
+
+
+
+    /* Help Modal Toggle */
+
+    function openHelpModal() {
+
+      document.getElementById('helpModal').classList.remove('hidden');
+
+    }
+
+
+
+    function closeHelpModal() {
+
+      document.getElementById('helpModal').classList.add('hidden');
+
+    }
+
+
+
+    /* =========================================================================
+
+     *  INITIALIZATION ON PAGE LOAD
+
+     * ========================================================================= */
+
+    window.onload = function () {
+
+      // Draw static background first frame
+
+      drawTrack();
+
+
+
+      // Auto load default Teachable Machine Pose Model
+
+      loadTeachableMachineModel('https://teachablemachine.withgoogle.com/models/OfpZ8VWq4/');
+
+    };
+
+  </script>
+
+</body>
+
+</html>
