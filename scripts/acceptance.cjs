@@ -10,6 +10,7 @@ const report = { base, startedAt: new Date().toISOString(), checks: [], observat
 const projects = ['cow-game', 'cow-run', 'to-do-list', 'sticky-notes', 'information-board', 'real-time-aqi-map', 'english-listening-speaking'];
 let browser;
 const checks = async (name, fn) => {
+  if (process.env.CHECK_FILTER && !name.includes(process.env.CHECK_FILTER)) return;
   try { const detail = await fn(); report.checks.push({ name, pass: true, detail }); console.log('PASS', name, detail || ''); }
   catch (e) { report.checks.push({ name, pass: false, error: e.stack }); console.error('FAIL', name, e.message); }
 };
@@ -164,6 +165,7 @@ async function clean(p, name) {
     await p.locator('#station-list > div').first().click();
     await p.waitForFunction(() => document.querySelector('.leaflet-popup') !== null);
     await p.locator('#tile-toggle-btn').click(); assert.equal(await p.evaluate(() => currentTileLayerIndex), 1);
+    await p.waitForFunction(() => [...document.querySelectorAll('.leaflet-tile')].some(i => i.src.includes('cartocdn.com') && i.complete && i.naturalWidth > 0));
     await p.locator('#locate-btn').click(); await p.waitForFunction(() => userLocationMarker !== null);
     const result = await p.evaluate(() => ({ stations: stationData.length, status: document.querySelector('#data-source-status').textContent }));
     await clean(p, 'real-time-aqi-map'); await p.close(); return { ...result, geolocation: 'simulated Taipei location' };

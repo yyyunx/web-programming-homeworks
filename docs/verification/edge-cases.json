@@ -1,0 +1,42 @@
+{
+  "base": "https://yyyunx.github.io/web-programming-homeworks/",
+  "startedAt": "2026-11-23T03:14:08.544Z",
+  "checks": [
+    {
+      "name": "Native camera denied: clear error without crashing",
+      "pass": true,
+      "detail": "攝影機權限遭拒，請點網址列左邊的網站設定允許相機。"
+    },
+    {
+      "name": "Native speech recognition: permission/service failure is displayed",
+      "pass": true,
+      "detail": {
+        "message": "無法使用麥克風：請允許瀏覽器的麥克風權限。",
+        "actualAudio": "not tested"
+      }
+    },
+    {
+      "name": "Mock speech: utterance parameters, recognition result scoring and persistence",
+      "pass": true,
+      "detail": {
+        "utterance": {
+          "text": "persuade",
+          "lang": "en-US",
+          "rate": 0.8999999761581421
+        },
+        "mode": "mocked synthesis and recognition; no real audio"
+      }
+    },
+    {
+      "name": "Mock network failure: Board demo labels and broken-image fallback",
+      "pass": true,
+      "detail": "Both data sources forced offline; image fallback executes without JS syntax errors"
+    },
+    {
+      "name": "Mock AQI failure: explicitly marked demonstration data",
+      "pass": true,
+      "detail": "示範資料（非即時）｜官方資料檔無法載入；請勿用作健康決策。"
+    }
+  ],
+  "finishedAt": "2026-11-23T03:14:25.888Z"
+}

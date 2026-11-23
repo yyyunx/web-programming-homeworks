@@ -1,0 +1,44 @@
+[
+  {
+    "repository": "yyyunx/to-do-list",
+    "commits": 1,
+    "missing_ancestors": [],
+    "original_tree_preserved": true
+  },
+  {
+    "repository": "yyyunx/sticky-notes",
+    "commits": 1,
+    "missing_ancestors": [],
+    "original_tree_preserved": true
+  },
+  {
+    "repository": "yyyunx/cow-game",
+    "commits": 2,
+    "missing_ancestors": [],
+    "original_tree_preserved": true
+  },
+  {
+    "repository": "yyyunx/cow-run",
+    "commits": 5,
+    "missing_ancestors": [],
+    "original_tree_preserved": true
+  },
+  {
+    "repository": "yyyunx/information-board",
+    "commits": 1,
+    "missing_ancestors": [],
+    "original_tree_preserved": true
+  },
+  {
+    "repository": "yyyunx/Real-time-AQI-Map",
+    "commits": 3,
+    "missing_ancestors": [],
+    "original_tree_preserved": true
+  },
+  {
+    "repository": "yyyunx/english-listening-speaking",
+    "commits": 1,
+    "missing_ancestors": [],
+    "original_tree_preserved": true
+  }
+]
