@@ -73,3 +73,16 @@ python3 -m http.server 8000 --directory _site
 ## 測試與已知限制
 
 部署完成後的實測紀錄會記錄在 [測試報告](docs/TESTING.md)，明確區分正式站台測試、模擬裝置、外部服務與未驗證項目。
+
+## 重跑驗收
+
+```sh
+npm ci
+npx playwright install chromium
+BASE_URL=https://yyyunx.github.io/web-programming-homeworks/ npm test
+BASE_URL=https://yyyunx.github.io/web-programming-homeworks/ node scripts/edge-cases.cjs
+```
+
+若使用系統 Chromium，可設定 `BROWSER_EXECUTABLE=/path/to/chromium`。結果與截圖預設存入 `test-results/`，測試使用隔離的瀏覽器 Context，不會清除一般使用者的資料。主驗收會使用 Chromium 模擬攝影機與模擬地理位置，故無法證明真實人體姿勢辨識準確度。`edge-cases.cjs` 的語音回傳及斷網情境使用 mock，實際音訊及遠端語音辨識服務需另行人工確認。
+
+AQI 中文測站名稱採用環境部 [AQX_P_07](https://data.moenv.gov.tw/dataset/detail/AQX_P_07) 的官方測站基本資料，擷取基準與對照保存在 `scripts/aqi-station-names.json`；未列入該名錄的新測站保留官方預覽端點的名稱。

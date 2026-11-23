@@ -1,0 +1,6 @@
+{
+  "name": "web-programming-homeworks",
+  "private": true,
+  "scripts": { "test": "node scripts/acceptance.cjs" },
+  "devDependencies": { "playwright": "1.62.1" }
+}

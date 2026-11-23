@@ -352,7 +352,7 @@
             let lastError;
             for (const candidate of candidates) {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 12000);
+                const timer = setTimeout(() => controller.abort(), 30000);
                 try {
                     const response = await fetch(candidate, { signal: controller.signal });
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);

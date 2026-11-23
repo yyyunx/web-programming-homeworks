@@ -544,7 +544,7 @@
 
                 if (activeFilter === '良好') matchesCategory = station.status === '良好' || cat.label === '良好';
                 else if (activeFilter === '普通') matchesCategory = station.status === '普通' || cat.label === '普通';
-                else if (activeFilter === '敏感') matchesCategory = station.status.includes('敏感') || cat.label === '敏感';
+                else if (activeFilter === '敏感') matchesCategory = station.status.includes('敏感') || cat.label.includes('敏感');
                 else if (activeFilter === '不健康') matchesCategory = station.status.includes('不健康') || cat.label.includes('不健康');
 
                 const matchesSearch = station.sitename.toLowerCase().includes(searchTerm) || 
