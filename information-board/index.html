@@ -219,7 +219,7 @@
                 <h3 class="text-lg font-bold text-slate-100">開放資料串接與說明</h3>
             </div>
             <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
-                <p>本 Dashboard 為資訊整合視覺化介面，即時介接衛生福利部與農業部開放資料 API：</p>
+                <p>本 Dashboard 為資訊整合視覺化介面，介接農業部開放資料 API：</p>
                 
                 <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1">
                     <div class="font-semibold text-agri-400 flex items-center justify-between">
@@ -239,7 +239,7 @@
 
                 <div class="p-2.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300/90 text-[11px]">
                     <i class="fa-solid fa-shield-halved mr-1"></i>
-                    <strong>自動降級與邊界保護機制：</strong> 若遇農業部伺服器維護、網絡跨域 CORS 阻擋或請求逾時，系統將自動啟動 local-fallback 機制，切換至驗證備份資料集，維持系統流暢運作。
+                    <strong>自動降級與邊界保護機制：</strong> 若遇農業部伺服器維護、網絡跨域 CORS 阻擋或請求逾時，系統將自動啟動 local-fallback 機制，切換至內建示範資料；示範資料不代表即時農產或真實認養現況。
                 </div>
             </div>
             <div class="pt-2 text-right">
@@ -346,137 +346,82 @@
             document.getElementById('btn-modal-ok').addEventListener('click', () => modal.classList.add('hidden'));
         }
 
-        /**
-         * Fetch Agricultural Produce Open Data (Dataset 061)
-         */
+        // Give each direct/proxy attempt its own timeout, including JSON parsing.
+        async function fetchOpenData(url) {
+            const candidates = [url, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)];
+            let lastError;
+            for (const candidate of candidates) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 12000);
+                try {
+                    const response = await fetch(candidate, { signal: controller.signal });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (!Array.isArray(data) || !data.length) throw new Error('資料集為空');
+                    return data;
+                } catch (error) { lastError = error; }
+                finally { clearTimeout(timer); }
+            }
+            throw lastError;
+        }
+
         async function fetchAgriculturalData() {
             AppState.produceLoading = true;
             AppState.produceError = null;
             renderProduceSkeleton();
-
-            // Try Direct Open Data URL or Proxy
-            const primaryApiUrl = 'https://data.moa.gov.tw/Service/OpenData/TransList.aspx?UnitId=061';
-            const corsProxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(primaryApiUrl);
-
-            let fetchedSuccessfully = false;
-
             try {
-                // Fetch with timeout logic
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-                let response;
-                try {
-                    response = await fetch(primaryApiUrl, { signal: controller.signal });
-                } catch (err) {
-                    // Try CORS Proxy as Backup
-                    response = await fetch(corsProxyUrl, { signal: controller.signal });
-                }
-
-                clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    const rawData = await response.json();
-                    if (Array.isArray(rawData) && rawData.length > 0) {
-                        AppState.produceData = normalizeProduceData(rawData);
-                        AppState.produceSourceType = 'api';
-                        fetchedSuccessfully = true;
-                    }
-                }
+                const rawData = await fetchOpenData('https://data.moa.gov.tw/Service/OpenData/DataFileService.aspx?UnitId=061');
+                const data = normalizeProduceData(rawData);
+                if (!data.length) throw new Error('沒有可顯示的農產資料');
+                AppState.produceData = data;
+                AppState.produceSourceType = 'api';
             } catch (error) {
-                console.warn('Produce API failed or timed out. Switching to Local Fallback Mock Dataset.', error);
-            }
-
-            if (!fetchedSuccessfully) {
-                // Graceful fallback to rich mock dataset
+                console.warn('農產 API 暫時無法使用，顯示示範資料。', error);
                 AppState.produceData = MOCK_PRODUCE_DATA;
                 AppState.produceSourceType = 'fallback';
+            } finally {
+                AppState.produceLoading = false;
+                renderProduceSection();
+                updateTickerText();
             }
-
-            AppState.produceLoading = false;
-            renderProduceSection();
-            updateTickerText();
         }
 
-        /**
-         * Normalize Produce API Payload to unified structure
-         */
         function normalizeProduceData(rawData) {
             return rawData.map((item, idx) => {
-                // Parse month field which could be string like "5", "5,6,7", or "五月"
-                let months = [];
-                const monthStr = String(item.CropMonth || item.盛產月份 || item.Month || '');
-                for (let m = 1; m <= 12; m++) {
-                    if (monthStr.includes(String(m)) || monthStr.includes(`${m}月`)) {
-                        months.push(m);
-                    }
-                }
-                if (months.length === 0) months = [1,2,3,4,5,6,7,8,9,10,11,12]; // default to all year if unspecified
-
+                const monthStr = String(item.month ?? item.CropMonth ?? item.盛產月份 ?? item.Month ?? '');
+                const months = [...new Set((monthStr.match(/\d+/g) || []).map(Number).filter(m => m >= 1 && m <= 12))];
                 return {
                     id: item.CropId || String(idx),
-                    cropName: item.CropName || item.農作物名稱 || item.Name || '時令農作物',
+                    cropName: item.crop || item.CropName || item.農作物名稱 || item.Name || '',
                     month: months,
-                    location: item.ProductionArea || item.主要產地 || item.Location || '全台地區',
-                    feature: item.Feature || item.特點簡介 || item.FeatureDescription || '產地直送，營養豐富，適合新鮮食用。'
+                    location: [item.county, item.town].filter(Boolean).join('') || item.ProductionArea || item.主要產地 || item.Location || '全台地區',
+                    feature: item.variety ? `品種：${item.variety}；類別：${item.type || '農產品'}` : item.Feature || item.特點簡介 || item.FeatureDescription || '依農業部資料查詢當季產地。'
                 };
-            });
+            }).filter(item => item.cropName && item.month.length);
         }
 
-        /**
-         * Fetch Stray Pet Adoption Open Data (Dataset QcbUEzN6E6DL)
-         */
         async function fetchShelterDogsData() {
             AppState.shelterLoading = true;
             AppState.shelterError = null;
             renderShelterSkeleton();
-
-            const primaryUrl = 'https://data.moa.gov.tw/Service/OpenData/TransList.aspx?UnitId=QcbUEzN6E6DL&$top=40';
-            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(primaryUrl);
-
-            let fetchedSuccessfully = false;
-
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 7000);
-
-                let response;
-                try {
-                    response = await fetch(primaryUrl, { signal: controller.signal });
-                } catch (err) {
-                    response = await fetch(proxyUrl, { signal: controller.signal });
-                }
-
-                clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        // Filter for dogs only (animal_Kind === '狗' or 'Dog')
-                        const dogsOnly = data.filter(item => 
-                            item.animal_Kind.includes('狗') || item.animal_Kind.toLowerCase().includes('dog')
-                        );
-
-                        if (dogsOnly.length > 0) {
-                            // Shuffle randomly for dynamic view on reload
-                            AppState.shelterData = shuffleArray(dogsOnly);
-                            AppState.shelterSourceType = 'api';
-                            fetchedSuccessfully = true;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.warn('Shelter API failed or timed out. Switching to Local Fallback Dataset.', err);
-            }
-
-            if (!fetchedSuccessfully) {
+                const data = await fetchOpenData('https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL&$top=100&animal_kind=狗&animal_status=OPEN');
+                const dogs = data.filter(item => {
+                    const kind = String(item.animal_kind || item.animal_Kind || '').toLowerCase();
+                    return (kind.includes('狗') || kind.includes('dog')) && (!item.animal_status || item.animal_status === 'OPEN');
+                });
+                if (!dogs.length) throw new Error('沒有可顯示的狗狗資料');
+                AppState.shelterData = shuffleArray(dogs);
+                AppState.shelterSourceType = 'api';
+            } catch (error) {
+                console.warn('收容所 API 暫時無法使用，顯示示範資料。', error);
                 AppState.shelterData = shuffleArray([...MOCK_SHELTER_DOGS]);
                 AppState.shelterSourceType = 'fallback';
+            } finally {
+                AppState.shelterLoading = false;
+                renderShelterSection();
+                updateTickerText();
             }
-
-            AppState.shelterLoading = false;
-            renderShelterSection();
-            updateTickerText();
         }
 
         /**
@@ -684,9 +629,12 @@
          */
         function updateTickerText() {
             const ticker = document.getElementById('ticker-text');
-            const produceSourceStr = AppState.produceSourceType === 'api' ? '農業部 API 即時連線' : '農業部備援資料庫';
-            const shelterSourceStr = AppState.shelterSourceType === 'api' ? '公立收容所 API 連線' : '浪浪備援資料庫';
+            const produceSourceStr = AppState.produceSourceType === 'api' ? '農業部 API 即時連線' : '農產示範資料（非即時）';
+            const shelterSourceStr = AppState.shelterSourceType === 'api' ? '公立收容所 API 連線' : '狗狗示範資料（非真實認養現況）';
 
+            const fallback = AppState.produceSourceType === 'fallback' || AppState.shelterSourceType === 'fallback';
+            document.getElementById('system-status-indicator').textContent = fallback ? '部分資料為示範資料' : '即時 API 連線正常';
+            document.getElementById('shelter-mode-badge').textContent = AppState.shelterSourceType === 'api' ? '即時更新' : '示範資料';
             ticker.innerHTML = `
                 <span class="text-amber-300 font-medium">${AppState.selectedMonth} 月當季限定:</span> 
                 包含水果與農作物產地特報 (${produceSourceStr}) ｜ 
