@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#10182d" />
+  <title>EchoWords — 100 個英文聽說練習</title>
+  <style>
+    :root { --navy:#10182d; --navy2:#192541; --text:#16213d; --muted:#66728b; --blue:#4b65e9; --blueDeep:#344bd3; --blueLight:#edf0ff; --border:#e5e9f3; --bg:#f6f8fd; --green:#0b9475; --greenLight:#e3f8f1; --red:#da4c5a; --redLight:#fff0f0; --white:#fff; --shadow:0 14px 45px rgba(30,45,85,.06); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--text); background:var(--bg); font-family:Inter,"Noto Sans TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    button:disabled { opacity:.52; cursor:not-allowed; }
+    button:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid #9facff; outline-offset:3px; }
+    .shell { max-width:1240px; margin:0 auto; padding:0 24px 65px; }
+    .topbar { height:85px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .brand { display:flex; align-items:center; gap:11px; font-size:21px; letter-spacing:-.7px; font-weight:850; color:#151e36; white-space:nowrap; }
+    .brand-logo { width:39px;height:39px; border-radius:13px; background:var(--navy); display:grid; place-items:center; color:#fff; }
+    .brand .accent { color:var(--blue); }
+    .nav { display:flex; align-items:center; gap:5px; background:#fff; padding:5px; border-radius:14px; box-shadow:0 2px 13px rgba(28,42,80,.035); }
+    .nav button { border:0; background:transparent; color:#76819a; border-radius:10px; padding:11px 19px; font-weight:700; font-size:13px; }
+    .nav button.active { background:#edf0ff; color:#3b52cd; }
+    .profile { display:flex;align-items:center;gap:8px;color:#77819b;font-size:12px;font-weight:650;white-space:nowrap; }
+    .profile-dot {width:30px;height:30px;border-radius:50%;background:#eaf8f3;color:#099276;display:grid;place-items:center;font-weight:850;}
+    .hero { overflow:hidden; position:relative; background:linear-gradient(113deg,#111b36,#263d72 80%,#33498d); border-radius:25px; padding:35px 42px; min-height:211px; display:flex;align-items:center; justify-content:space-between; gap:32px; color:white; }
+    .hero::before { content:""; width:390px;height:390px;border:1px solid rgba(255,255,255,.11);border-radius:50%;position:absolute;right:-85px;top:-210px;box-shadow:0 0 0 38px rgba(255,255,255,.03),0 0 0 90px rgba(255,255,255,.025);pointer-events:none; }
+    .eyebrow { text-transform:uppercase;letter-spacing:2.2px;font-size:10px;font-weight:800; color:#afc0ff; margin-bottom:13px; }
+    .hero h1 { margin:0 0 12px;font-size:clamp(25px,3vw,36px);line-height:1.3;letter-spacing:-1px;font-weight:850; }
+    .hero p { margin:0;color:#c2cee8;font-size:13px;line-height:1.9; }
+    .hero-side { z-index:1; display:flex;align-items:center;gap:13px; }
+    .hero-stat { min-width:118px; border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.065);padding:15px 17px;border-radius:15px;backdrop-filter:blur(5px); }
+    .hero-stat strong { display:block;font-size:26px;line-height:1.2;font-weight:850;letter-spacing:-.5px; }
+    .hero-stat span { display:block;color:#bdc8e5;font-size:11px;margin-top:6px;white-space:nowrap; }
+    .section-head { display:flex;align-items:end;justify-content:space-between;gap:16px;margin:29px 0 15px; }
+    .section-head h2 { margin:0;font-size:19px;font-weight:850;letter-spacing:-.5px; }
+    .section-head p { margin:5px 0 0;font-size:12px;color:#8390a7; }
+    .chip { display:inline-flex;align-items:center;gap:7px;padding:8px 12px;background:#fff;color:#596681;border:1px solid var(--border);border-radius:20px;font-size:11px;font-weight:750;white-space:nowrap; }
+    .mode-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px; }
+    .mode { text-align:left; border:1.5px solid var(--border);background:#fff;border-radius:17px;padding:18px 19px;display:flex;align-items:center;gap:14px;min-height:96px;transition:transform .16s,border .16s,box-shadow .16s; }
+    .mode:hover { transform:translateY(-2px);box-shadow:var(--shadow); }
+    .mode.selected { border-color:#7385ed;background:#f3f5ff;box-shadow:0 6px 22px rgba(79,104,224,.08); }
+    .mode-icon { flex:0 0 48px;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#edf1ff;color:var(--blue); }
+    .mode:nth-child(2) .mode-icon { background:#e5f8f2;color:#0f9a80; }
+    .mode:nth-child(3) .mode-icon { background:#fff1e9;color:#d68140; }
+    .mode strong { display:block;font-size:14px;font-weight:850;color:#1c2b46; }
+    .mode small { display:block;margin-top:5px;font-size:11px;color:#8892a7;line-height:1.45; }
+    .mode-check { margin-left:auto;color:#596be6; }
+    .workspace { margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) 295px;gap:18px;align-items:start; }
+    .card { background:#fff;border:1px solid var(--border);border-radius:21px;box-shadow:var(--shadow); }
+    .practice { min-height:500px;padding:28px 34px 27px; }
+    .practice-toolbar { display:flex;justify-content:space-between;align-items:center;gap:15px; }
+    .kicker { font-size:10px;letter-spacing:1.8px;color:#8b98b1;font-weight:850;text-transform:uppercase; }
+    .heading-group h3 { margin:7px 0 0;font-size:18px;font-weight:850; }
+    .select { min-width:140px;border:1px solid var(--border);border-radius:10px;background:#fff;padding:11px 12px;color:#41516e;font-weight:700;font-size:12px;max-width:190px; }
+    .progress-row { margin:24px 0 0;display:flex;justify-content:space-between;font-size:11px;color:#8a96ac;font-weight:750; }
+    .progress-track { margin-top:9px;height:7px;border-radius:99px;background:#edf0f7;overflow:hidden; }
+    .progress-fill {height:100%;background:linear-gradient(90deg,#536bf0,#8998fa);border-radius:99px;transition:width .25s;}
+    .prompt-area { text-align:center;padding:24px 0 17px; }
+    .round-tag { display:inline-block;background:#f1f4fb;border:1px solid #e9edf6;border-radius:100px;padding:8px 12px;color:#63728b;font-size:11px;font-weight:800; }
+    .speaker { width:100px;height:100px;border:0;border-radius:50%;margin:20px auto 10px;background:linear-gradient(135deg,#506bef,#7f91fa);color:#fff;box-shadow:0 13px 35px rgba(77,101,227,.24);display:grid;place-items:center;transition:transform .2s; }
+    .speaker:hover { transform:scale(1.05); }
+    .speaker:active {transform:scale(.98);}
+    .prompt-area h4 { margin:11px 0 5px;font-size:21px;letter-spacing:-.4px;font-weight:850; }
+    .muted { color:#8a96ae;font-size:12px;line-height:1.7; }
+    .speaking-word { display:block;margin:26px auto 7px;font-size:clamp(32px,4vw,43px);line-height:1.2;font-weight:850;letter-spacing:-.9px;color:#253d83;overflow-wrap:anywhere; }
+    .speaking-meaning {font-size:15px;color:#6f7a93;margin:0 0 20px;}
+    .speak-play {display:inline-flex;align-items:center;gap:7px;background:#f1f4ff;border:1px solid #e0e7ff;color:#465fd5;padding:9px 14px;border-radius:100px;font-weight:800;font-size:11px;}
+    .input-label { display:block;color:#4f5d76;font-weight:800;font-size:12px;margin:0 0 9px; }
+    .answer-form { display:flex;gap:9px; }
+    .answer-input { width:100%;min-width:0;flex:1;background:#fafbfe;color:#16213d;border:1px solid #dce2f0;border-radius:11px;padding:14px 15px;font-size:14px; }
+    .answer-input:focus { outline:none;border-color:#6f83ea;box-shadow:0 0 0 3px #eff1ff; }
+    .primary {border:0;background:var(--blue);border-radius:11px;color:#fff;padding:13px 23px;font-size:12px;font-weight:850;white-space:nowrap;}
+    .primary:hover {background:var(--blueDeep);}
+    .subtle { background:none;border:none;padding:10px 4px;color:#6878af;font-size:12px;font-weight:800; }
+    .secondary {border:1px solid #dce3f1;background:#fff;color:#596782;padding:12px 18px;border-radius:11px;font-size:12px;font-weight:800;}
+    .practice-footer { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px; }
+    .feedback {margin-top:16px;border-radius:13px;border:1px solid #cbece0;background:#effbf6;padding:17px 18px;text-align:left;}
+    .feedback.bad {background:#fff6f6;border-color:#ffe0e0;}
+    .feedback-title {display:flex;align-items:center;gap:7px;font-size:13px;font-weight:850;color:#0b8a70;}
+    .feedback.bad .feedback-title {color:#bf4454;}
+    .feedback-word {font-size:23px;font-weight:850;margin:8px 0 3px;overflow-wrap:anywhere;}
+    .feedback-meta {font-size:12px;color:#6b7891;line-height:1.75;}
+    .feedback-example {border-top:1px solid rgba(110,125,150,.13);margin-top:10px;padding-top:10px;color:#5f6d86;font-size:12px;line-height:1.75;}
+    .listen-btn {width:84px;height:84px;background:linear-gradient(135deg,#14ab8b,#44c7ab);color:white;border:0;border-radius:50%;box-shadow:0 13px 30px rgba(27,170,139,.23);display:grid;place-items:center;margin:15px auto 7px;}
+    .listen-btn.recording { animation:pulse 1.05s infinite alternate;background:linear-gradient(135deg,#df4b5b,#fc8191);box-shadow:0 12px 30px rgba(220,85,105,.22); }
+    @keyframes pulse {to {transform:scale(1.07);box-shadow:0 0 0 12px rgba(225,80,100,.10);} }
+    .notice { margin:15px auto 0;border-radius:10px;padding:11px 14px;font-size:11px;line-height:1.65;max-width:465px;color:#8a6681;background:#fff4f8; }
+    .side {padding:24px;}
+    .side h3 {margin:0;font-size:15px;font-weight:850;}
+    .side-sub {font-size:11px;color:#929ab0;margin:7px 0 24px;}
+    .ring-wrap {display:flex;justify-content:center;align-items:center;margin:10px 0 26px;}
+    .ring {--pct:0; width:160px;height:160px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#576eef calc(var(--pct)*1%),#edf0f8 0);}
+    .ring-hole {height:132px;width:132px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+    .ring-number {font-size:35px;font-weight:900;letter-spacing:-1px;line-height:1;}
+    .ring-label {font-size:11px;color:#8792a9;margin-top:7px;}
+    .side-divider {border:0;border-top:1px solid #edf0f6;margin:20px 0;}
+    .mini-stat {display:flex;align-items:center;justify-content:space-between;margin:17px 0;gap:10px;font-size:12px;color:#6e7a93;}
+    .mini-stat strong {font-size:16px;color:#24314d;font-weight:850;}
+    .mini-stat.green strong {color:#0b9879;}
+    .hint-box {background:#f6f8fe;border:1px solid #edf0fa;padding:15px;border-radius:13px;margin-top:20px;}
+    .hint-box strong {display:block;font-size:12px;color:#3a4d86;}
+    .hint-box p {color:#8290aa;font-size:11px;line-height:1.75;margin:6px 0 0;}
+    .full-width {width:100%;}
+    .report-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:22px 0;}
+    .stat-card {background:white;border:1px solid var(--border);border-radius:17px;padding:23px;}
+    .stat-label {color:#8792a7;font-size:12px;font-weight:800;}
+    .stat-number {font-size:31px;font-weight:900;margin:8px 0 4px;letter-spacing:-1px;}
+    .stat-desc {color:#abb2c1;font-size:11px;line-height:1.6;}
+    .report-row {display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:18px;}
+    .report-panel {padding:25px;}
+    .report-panel h3 {font-size:16px;margin:0 0 7px;}
+    .report-panel > p {font-size:11px;color:#929caf;margin:0 0 23px;}
+    .weekly {height:202px;display:flex;align-items:end;justify-content:space-around;gap:10px;padding-top:7px;border-bottom:1px solid #e7eaf4;}
+    .bar-col {height:100%;display:flex;flex:1;align-items:center;justify-content:end;flex-direction:column;gap:9px;position:relative;}
+    .bar-number {font-size:11px;color:#75829a;font-weight:800;}
+    .bar {width:min(38px,82%);background:#dce3ff;border-radius:8px 8px 2px 2px;min-height:2px;}
+    .bar.today {background:linear-gradient(#7086fa,#4c63df);}
+    .bar-label {font-size:11px;color:#8c97ab;padding-bottom:10px;white-space:nowrap;}
+    .performance {display:grid;gap:18px;}
+    .performance-item {font-size:12px;color:#57647f;}
+    .performance-header {display:flex;justify-content:space-between;margin-bottom:9px;font-weight:800;}
+    .performance-track {background:#eef1f8;height:9px;border-radius:99px;overflow:hidden;}
+    .performance-fill {height:100%;background:#6176e9;border-radius:99px;}
+    .performance-fill.green {background:#16a989;}
+    .weak-list {list-style:none;padding:0;margin:0;}
+    .weak-list li {display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #f0f2f8;padding:12px 0;}
+    .weak-list li:last-child {border:0;}
+    .weak-list strong {font-size:13px;display:block;overflow-wrap:anywhere;}
+    .weak-list span {display:block;color:#94a0b4;font-size:11px;margin-top:3px;}
+    .tag {display:inline-flex;align-items:center;border-radius:99px;font-size:10px;font-weight:850;padding:6px 9px;white-space:nowrap;background:#f1f3f9;color:#78839a;}
+    .tag.green {color:#0d997b;background:#e5f9f2;}.tag.red {color:#cb5260;background:#fff0f1;}.tag.blue {color:#5a6ce3;background:#edf0ff;}
+    .library-tools {display:flex;gap:12px;margin:21px 0 15px;}
+    .search-input {padding:13px 15px;flex:1;min-width:0;border:1px solid var(--border);border-radius:12px;background:white;font-size:12px;color:#33415e;}
+    .library-count {color:#929db0;font-size:12px;margin:9px 0 14px;}
+    .library-list {overflow:hidden;}
+    .vocab-row {display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:16px;padding:17px 23px;border-top:1px solid #edf0f7;}
+    .vocab-row:first-child {border-top:0;}
+    .number-pill {width:39px;height:39px;border-radius:12px;background:#f1f3fa;display:grid;place-items:center;color:#8d98ac;font-size:11px;font-weight:850;}
+    .vocab-name {font-size:14px;font-weight:850;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .vocab-desc {font-size:12px;color:#6c7a95;margin:4px 0 0;line-height:1.5;}
+    .vocab-example {font-size:11px;color:#9da7b9;margin:5px 0 0;line-height:1.6;}
+    .vocab-actions {display:flex;gap:7px;}
+    .icon-btn {display:grid;place-items:center;width:37px;height:37px;border:1px solid #e4e9f4;border-radius:11px;color:#6074cf;background:white;}
+    .icon-btn:hover {background:#eff2ff;}
+    .small-btn {border:1px solid #e3e8f5;background:#f5f7ff;border-radius:10px;padding:10px 13px;color:#4960ca;font-size:11px;font-weight:850;white-space:nowrap;}
+    .end-state {text-align:center;padding:40px 0 26px;}
+    .end-state h3 {font-size:23px;margin:16px 0 7px;}
+    .end-state p {color:#7c88a0;font-size:13px;line-height:1.7;}
+    .end-emoji {font-size:46px;}
+    .end-score {font-size:54px;font-weight:900;letter-spacing:-2px;color:#4d65dd;}
+    .help-strip {display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid #e4e9f5;background:#fff;border-radius:15px;padding:15px 20px;margin-top:22px;color:#8c97ad;font-size:11px;line-height:1.7;}
+    .help-strip strong {color:#53627e;}
+    footer {text-align:center;margin-top:30px;color:#a2acc0;font-size:11px;}
+    .empty {padding:45px 20px;text-align:center;color:#8190a8;font-size:13px;line-height:1.9;}
+    .empty strong {display:block;color:#293956;font-size:17px;margin-bottom:8px;}
+    @media(max-width:900px){.hero-side{display:none}.workspace{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}.side h3,.side-sub,.hint-box{grid-column:span 2}.ring-wrap{grid-row:3 / span 5;justify-content:start}.report-grid{grid-template-columns:repeat(2,1fr)}.report-row{grid-template-columns:1fr}}
+    @media(max-width:650px){.shell{padding:0 13px 35px}.topbar{height:auto;min-height:77px;flex-wrap:wrap;padding:14px 3px;gap:9px}.brand{font-size:18px}.brand-logo{width:33px;height:33px}.nav{order:3;width:100%;justify-content:space-around}.nav button{flex:1;padding:10px 7px;font-size:12px}.profile{font-size:10px}.profile-dot{width:25px;height:25px}.hero{padding:28px 24px;min-height:165px;border-radius:18px}.hero h1{font-size:26px}.hero p{font-size:12px}.mode-grid{gap:8px}.mode{padding:12px 7px;display:block;text-align:center;min-height:117px}.mode-icon{margin:0 auto 10px;width:40px;height:40px}.mode strong{font-size:12px}.mode small{font-size:10px}.mode-check{display:none}.section-head{align-items:start}.chip{display:none}.practice{padding:21px 17px;min-height:445px}.select{min-width:117px;width:130px;padding:10px 5px}.prompt-area{padding-top:17px}.speaker{width:91px;height:91px}.answer-form{flex-direction:column}.answer-form .primary{width:100%}.practice-footer{flex-wrap:wrap}.side{display:block;padding:22px}.ring-wrap{justify-content:center}.report-grid{gap:9px}.stat-card{padding:17px}.stat-number{font-size:28px}.library-tools{flex-wrap:wrap}.library-tools .search-input{flex-basis:100%}.vocab-row{grid-template-columns:33px minmax(0,1fr);padding:15px 12px;gap:10px}.number-pill{width:31px;height:31px}.vocab-actions{grid-column:2}.vocab-name{font-size:13px}.help-strip{display:block}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10v4M7 6v12M11 3v18M15 7v10M19 10v4" /></svg></div>
+        Echo<span class="accent">Words</span>
+      </div>
+      <nav class="nav" aria-label="主要功能">
+        <button type="button" data-view="practice" class="active">✦　開始練習</button>
+        <button type="button" data-view="library">▦　100 單字庫</button>
+        <button type="button" data-view="report">▥　學習報告</button>
+      </nav>
+      <div class="profile"><div class="profile-dot">EN</div> 每天進步一點點</div>
+    </header>
+    <section class="hero">
+      <div style="z-index:1"><div class="eyebrow">LISTEN · SPEAK · REMEMBER</div><h1>聽得懂，也要說得出口。</h1><p>從 100 個實用英文單字與片語開始，讓每一次聽與說，都看得見進步。</p></div>
+      <div class="hero-side" aria-label="學習總覽"><div class="hero-stat"><strong>100</strong><span>實用單字與片語</span></div><div class="hero-stat"><strong>10</strong><span>生活主題</span></div></div>
+    </section>
+    <main id="app"></main>
+    <div class="help-strip"><div><strong>🔒 隱私與支援：</strong>練習紀錄只保存在這台裝置的瀏覽器中。朗讀評分是依「語音辨識文字」比對，並非專業發音音素評測；語音辨識可能由瀏覽器服務處理音訊。</div><div style="white-space:nowrap">建議使用 Chrome / Edge · HTTPS / localhost</div></div>
+    <footer>EchoWords · 每天 10 題，讓英文更自然</footer>
+  </div>
+  <script>
+    'use strict';
+    // 10 個主題 × 10 個單字／片語 = 100 題。每筆依序：英文、中文、英文例句。
+    const GROUPS = [
+      { name:'日常交流', icon:'💬', items:[
+        ['hello','你好','Hello, how are you today?'],['introduce','介紹','Let me introduce my best friend.'],['appreciate','感謝；欣賞','I really appreciate your help.'],['apologize','道歉','I want to apologize for being late.'],['promise','承諾','I promise to call you tomorrow.'],['explain','解釋','Can you explain this idea again?'],['suggest','建議','I suggest taking a short break.'],['agree','同意','I agree with your decision.'],['disagree','不同意','I politely disagree with that point.'],['prefer','比較喜歡','I prefer tea to coffee.']
+      ]},
+      { name:'學習與工作', icon:'📚', items:[
+        ['assignment','作業；任務','I finished the assignment last night.'],['deadline','截止期限','The deadline is next Friday.'],['schedule','行程；時間表','My schedule is full this week.'],['focus','專注','Try to focus on one task.'],['review','複習；檢查','I need to review my notes.'],['improve','改善；進步','Practice can improve your English.'],['research','研究','We are doing research on climate change.'],['collaborate','合作','Our teams collaborate on projects.'],['efficient','有效率的','This is a more efficient method.'],['solve a problem','解決問題','We need to solve a problem together.']
+      ]},
+      { name:'心情與個性', icon:'✨', items:[
+        ['confident','有自信的','She feels confident before the interview.'],['nervous','緊張的','I get nervous before speaking in public.'],['curious','好奇的','The children are curious about space.'],['patient','有耐心的','Please be patient with yourself.'],['grateful','感激的','I am grateful for your support.'],['disappointed','失望的','He was disappointed by the result.'],['excited','興奮的','We are excited about the trip.'],['calm down','冷靜下來','Take a deep breath and calm down.'],['give up','放棄','Do not give up on your dreams.'],['look forward to','期待','I look forward to meeting you.']
+      ]},
+      { name:'旅行與交通', icon:'✈️', items:[
+        ['destination','目的地','Our destination is Taipei.'],['luggage','行李','Please keep your luggage with you.'],['reservation','預訂','I made a reservation for two people.'],['passport','護照','Do not forget your passport.'],['departure','出發；離境','The departure time is eight o’clock.'],['arrival','抵達','Our arrival was delayed by rain.'],['traffic jam','塞車','We got stuck in a traffic jam.'],['check in','辦理報到','You can check in at the front desk.'],['get around','四處移動','It is easy to get around by train.'],['on the way','在路上','I am on the way to the station.']
+      ]},
+      { name:'飲食與購物', icon:'🛍️', items:[
+        ['ingredient','食材；成分','Fresh ingredients make food taste better.'],['delicious','美味的','This soup is delicious.'],['spicy','辛辣的','I love spicy food.'],['receipt','收據','Could I have the receipt, please?'],['discount','折扣','Students can get a discount.'],['refund','退款','I would like to ask for a refund.'],['affordable','負擔得起的','This restaurant is affordable.'],['out of stock','缺貨','Sorry, this item is out of stock.'],['try on','試穿','Can I try on this jacket?'],['take away','外帶','I would like to take away my lunch.']
+      ]},
+      { name:'健康與生活', icon:'🌿', items:[
+        ['exercise','運動','Regular exercise is good for you.'],['routine','日常習慣','Reading is part of my morning routine.'],['healthy','健康的','I try to eat healthy meals.'],['exhausted','筋疲力盡的','I felt exhausted after work.'],['recover','恢復','She needs time to recover.'],['appointment','預約','I have a doctor’s appointment tomorrow.'],['take a break','休息一下','Let us take a break after lunch.'],['get enough sleep','睡眠充足','Try to get enough sleep every night.'],['stay hydrated','補充足夠水分','Remember to stay hydrated in summer.'],['feel better','感覺好些','I hope you feel better soon.']
+      ]},
+      { name:'科技與網路', icon:'💻', items:[
+        ['device','裝置','This device is easy to use.'],['connection','連線；連結','The internet connection is slow.'],['update','更新','Please update the app.'],['download','下載','You can download the file here.'],['upload','上傳','I need to upload my homework.'],['password','密碼','Choose a strong password.'],['privacy','隱私','Online privacy is important.'],['back up','備份','Remember to back up your files.'],['log in','登入','Please log in to your account.'],['run out of','用完；耗盡','We ran out of storage space.']
+      ]},
+      { name:'時間與計畫', icon:'🗓️', items:[
+        ['priority','優先事項','Finishing this task is my priority.'],['urgent','緊急的','This message is urgent.'],['postpone','延後','They decided to postpone the meeting.'],['organize','整理；安排','I need to organize my desk.'],['prepare','準備','We should prepare for the exam.'],['remind','提醒','Please remind me to call her.'],['in advance','事先；提前','Book your tickets in advance.'],['on time','準時','The train arrived on time.'],['from now on','從現在起','I will study every day from now on.'],['sooner or later','遲早','Sooner or later, you will understand.']
+      ]},
+      { name:'社交與溝通', icon:'🤝', items:[
+        ['conversation','對話','We had a great conversation.'],['opinion','意見；看法','Everyone has a different opinion.'],['interrupt','打斷','Sorry to interrupt your discussion.'],['persuade','說服','She tried to persuade him to join.'],['respond','回應','Please respond to my email.'],['support','支持','My friends always support me.'],['make sense','有道理；說得通','Your explanation makes sense.'],['keep in touch','保持聯絡','Let us keep in touch after graduation.'],['get along with','與……相處融洽','I get along with my coworkers.'],['speak up','大聲說；勇於表達','Do not be afraid to speak up.']
+      ]},
+      { name:'高頻實用片語', icon:'⚡', items:[
+        ['figure out','弄懂；想出','I finally figured out the answer.'],['deal with','處理；應對','We can deal with this issue.'],['come up with','想出（點子）','Can you come up with a new idea?'],['take care of','照顧；處理','I will take care of the details.'],['pay attention to','注意','Please pay attention to the instructions.'],['be used to','習慣於','I am used to waking up early.'],['turn out','結果是','Everything turned out fine.'],['at least','至少','Try to read for at least ten minutes.'],['as soon as possible','盡快','Please reply as soon as possible.'],['in other words','換句話說','In other words, practice makes progress.']
+      ]}
+    ];
+    const VOCAB = GROUPS.flatMap((group, gi) => group.items.map(([term, meaning, example], i) => ({ id:gi*10+i+1,term,meaning,example,category:group.name,icon:group.icon })));
+    const CATEGORIES = ['全部主題', ...GROUPS.map(g=>g.name)];
+    const KEY='echowords_100_v1';
+    let records=[];
+    try { const parsed=JSON.parse(localStorage.getItem(KEY)||'[]'); records=Array.isArray(parsed)?parsed.filter(r=>r&&Number.isInteger(r.wordId)&&['listen','speak'].includes(r.mode)&&typeof r.correct==='boolean'&&typeof r.at==='number'):[]; } catch (_) { records=[]; }
+    let view='practice', mode='listen', category='全部主題', libraryCategory='全部主題', search='', currentQueue=[], index=0, answered=false, hintShown=false, lastFeedback=null, recording=false, microphoneError='', rec=null, speechRate=.9;
+    const app=document.querySelector('#app');
+    const safe=(v)=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const normalize=(s)=>String(s).toLowerCase().normalize('NFKC').replace(/[’‘]/g,"'").replace(/[-–—]/g,' ').replace(/[^a-z0-9'\s]/g,'').replace(/\s+/g,' ').trim();
+    const $=(s)=>document.querySelector(s);
+    const speakerSvg='<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.7 5.5a9 9 0 0 1 0 13"/></svg>';
+    const micSvg='<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg>';
+    const tinySound='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>';
+    const micSupported=Boolean(window.SpeechRecognition||window.webkitSpeechRecognition);
+    const lastByWord=()=>{ const m=new Map(); for(const r of records) m.set(r.wordId,r);return m;};
+    function getWeakIds(){return new Set([...lastByWord()].filter(([,r])=>!r.correct).map(([id])=>id));}
+    function computeStats(){
+      const listen=records.filter(r=>r.mode==='listen'),speak=records.filter(r=>r.mode==='speak');
+      const both=new Map();let maxStreak=0,streak=0;
+      for(const r of records){if(r.correct){streak++;maxStreak=Math.max(maxStreak,streak);if(!both.has(r.wordId))both.set(r.wordId,new Set());both.get(r.wordId).add(r.mode);}else streak=0;}
+      const mastered=[...both].filter(([,set])=>set.size===2).length;
+      const accuracy=(arr)=>arr.length?Math.round(arr.filter(r=>r.correct).length/arr.length*100):0;
+      return {total:records.length,correct:records.filter(r=>r.correct).length,accuracy:accuracy(records),listen:listen.length,listenAccuracy:accuracy(listen),speak:speak.length,speakAccuracy:accuracy(speak),mastered,learned:both.size,streak,maxStreak,weak:getWeakIds().size};
+    }
+    function save(){try{localStorage.setItem(KEY,JSON.stringify(records));}catch(e){console.warn('無法保存本機紀錄',e);}}
+    function shuffle(items){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+    function makeQueue(firstId){
+      if(recording&&rec){try{rec.abort();}catch(_){}}
+      recording=false;microphoneError='';
+      const weak=getWeakIds();
+      let items=VOCAB.filter(w=>(category==='全部主題'||w.category===category)&&(mode!=='review'||weak.has(w.id)));
+      items=shuffle(items);
+      if(firstId){const found=VOCAB.find(w=>w.id===firstId);if(found){items=items.filter(w=>w.id!==firstId);items.unshift(found);}}
+      currentQueue=items.slice(0,10);index=0;answered=false;hintShown=false;lastFeedback=null;
+    }
+    function actualMode(){return mode==='review'?(index%2===0?'listen':'speak'):mode;}
+    function currentWord(){return currentQueue[index]||null;}
+    function render(){
+      document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+      if(view==='practice')renderPractice();else if(view==='library')renderLibrary();else renderReport();
+    }
+    function categoryOptions(selected){return CATEGORIES.map(c=>`<option value="${safe(c)}" ${c===selected?'selected':''}>${safe(c)}</option>`).join('');}
+    function renderModeCards(){
+      const modes=[['listen','🎧','聽力辨識','聽英文，拼出正確單字'],['speak','🎤','口說練習','看英文，開口大聲朗讀'],['review','↺','錯題複習','集中加強尚未答對的題目']];
+      return `<div class="section-head"><div><h2>選擇練習模式</h2><p>每次挑戰 10 題，從聽力到口說逐步累積實力</p></div><span class="chip">✦ 100 題精選 · 免費練習</span></div><div class="mode-grid">${modes.map(([id,emoji,title,subtitle])=>`<button type="button" data-mode="${id}" class="mode ${mode===id?'selected':''}" aria-pressed="${mode===id}"><span class="mode-icon" aria-hidden="true" style="font-size:22px">${emoji}</span><span><strong>${title}</strong><small>${subtitle}</small></span><span class="mode-check">${mode===id?'●':''}</span></button>`).join('')}</div>`;
+    }
+    function renderPractice(){
+      const stats=computeStats(),len=currentQueue.length,w=currentWord(),doing=index<len;
+      let questionHtml='';
+      if(len===0){questionHtml=`<div class="empty"><div style="font-size:39px">${mode==='review'?'🎉':'📭'}</div><strong>${mode==='review'?'目前沒有需要複習的錯題':'這個主題暫時沒有題目'}</strong>${mode==='review'?'完成錯題後，就能在這裡看到成果。':'請切換其他主題再試一次。'}<div style="margin-top:17px"><button class="primary" data-mode="listen">練習聽力</button></div></div>`;}
+      else if(!doing){
+        const completed=window.sessionResults||[];
+        const score=completed.filter(v=>v.correct).length;
+        questionHtml=`<div class="end-state"><div class="end-emoji">${score===len?'🏆':'🎊'}</div><h3>本回合完成！</h3><p>你剛完成 ${len} 道題目，繼續練習就會越來越熟練。</p><div class="end-score">${score} <span style="font-size:20px;color:#a0aac0">/ ${len}</span></div><p>答對 ${score} 題 · 答錯 ${len-score} 題</p><div style="display:flex;justify-content:center;gap:9px;margin-top:21px;flex-wrap:wrap"><button class="primary" data-action="restart">再練習 10 題 →</button><button class="secondary" data-view="report">查看學習成果</button></div></div>`;
+      }else{
+        const real=actualMode();
+        const top=real==='listen'?`<div class="round-tag">🎧 LISTEN & TYPE</div><button type="button" data-action="play-current" class="speaker" aria-label="播放英文發音" title="播放英文發音">${speakerSvg}</button><h4>你聽到了什麼？</h4><div class="muted">點擊播放按鈕，仔細聽後輸入英文單字或片語</div>`:
+        `<div class="round-tag">🎤 READ & SPEAK</div><span class="speaking-word">${safe(w.term)}</span><p class="speaking-meaning">${safe(w.meaning)}</p><button class="speak-play" data-action="play-current" type="button">${tinySound} 聆聽標準語音</button><h4>換你開口說！</h4><div class="muted">點擊麥克風，清楚念出上面的英文</div>`;
+        const feedback=answered?`<div class="feedback ${lastFeedback.correct?'':'bad'}" role="status"><div class="feedback-title">${lastFeedback.correct?'✓ 答對了，做得很好！':'✕ 再記一下這個字！'}</div><div class="feedback-word">${safe(w.term)} <button type="button" class="icon-btn" data-action="play-current" title="重新聆聽" style="display:inline-grid;vertical-align:middle;width:32px;height:32px">${tinySound}</button></div><div class="feedback-meta">${safe(w.meaning)}${lastFeedback.response?`<div>你的${real==='listen'?'答案':'辨識結果'}：${safe(lastFeedback.response)}</div>`:''}${lastFeedback.skipped?'<div>本題已跳過，計為未答對。</div>':''}</div><div class="feedback-example">Example · ${safe(w.example)}</div></div>`:'';
+        const answerArea=real==='listen'?`<form id="answer-form" class="answer-form"><input id="answer-input" class="answer-input" placeholder="輸入你聽到的英文..." autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="輸入你聽到的英文" ${answered?'disabled':''}/><button class="primary" type="submit" ${answered?'disabled':''}>確認答案 →</button></form>`:
+        `<div style="text-align:center"><button class="listen-btn ${recording?'recording':''}" data-action="record" type="button" aria-label="${recording?'停止錄音':'開始語音辨識'}" ${answered||!micSupported?'disabled':''}>${micSvg}</button><div class="muted" role="status">${recording?'🔴 正在聆聽...請念出上方英文':(!micSupported?'此瀏覽器不支援語音辨識，請使用 Chrome 或 Edge':'點擊麥克風開始語音辨識')}</div>${microphoneError?`<div class="notice" role="alert">${safe(microphoneError)}</div>`:''}</div>`;
+        questionHtml=`<div class="practice-toolbar"><div class="heading-group"><div class="kicker">TODAY'S PRACTICE</div><h3>${real==='listen'?'聽力拼字挑戰':'英文朗讀挑戰'}</h3></div><select class="select" id="practice-category" aria-label="選擇學習主題">${categoryOptions(category)}</select></div><div class="progress-row"><span>題目 ${index+1} / ${len}</span><span>${Math.round(index/len*100)}% COMPLETE</span></div><div class="progress-track"><div class="progress-fill" style="width:${index/len*100}%"></div></div><div class="prompt-area">${top}</div>${!answered?answerArea:''}${feedback}<div class="practice-footer"><div>${!answered&&real==='listen'?`<button class="subtle" data-action="hint" type="button">${hintShown?`💡 ${safe(w.meaning)}（${w.term.split(' ').length} 個字）`:'💡 顯示中文提示'}</button>`:''}</div><div style="display:flex;gap:8px">${answered?`<button type="button" class="primary" data-action="next">${index===len-1?'查看本回合結果':'下一題 →'}</button>`:`<button type="button" class="secondary" data-action="skip">跳過此題</button>`}</div></div>`;
+      }
+      app.innerHTML=`${renderModeCards()}<div class="workspace"><section class="card practice" aria-label="英文練習區">${questionHtml}</section><aside class="card side"><h3>你的學習進度</h3><div class="side-sub">每次累積，都是很棒的進步</div><div class="ring-wrap"><div class="ring" style="--pct:${stats.mastered}"><div class="ring-hole"><div class="ring-number">${stats.mastered}<span style="font-size:16px;color:#a0abc0">/100</span></div><div class="ring-label">聽力＋口說都答對</div></div></div></div><div><div class="mini-stat"><span>📖 至少答對一次</span><strong>${stats.learned} 字</strong></div><div class="mini-stat green"><span>✓ 累積答對次數</span><strong>${stats.correct} 次</strong></div><div class="mini-stat"><span>◎ 總正確率</span><strong>${stats.accuracy}%</strong></div><div class="mini-stat"><span>🔥 目前連對</span><strong>${stats.streak} 題</strong></div><div class="mini-stat"><span>↺ 待複習</span><strong>${stats.weak} 題</strong></div></div><div class="hint-box"><strong>💡 學習小秘訣</strong><p>先聽 1～2 次，再試著拼字；口說時請在安靜環境念完整的英文片語。</p></div></aside></div>`;
+    }
+    function renderLibrary(){
+      const mastered=new Map();for(const r of records){if(r.correct){if(!mastered.has(r.wordId))mastered.set(r.wordId,new Set());mastered.get(r.wordId).add(r.mode);}}
+      const weak=getWeakIds();
+      const q=normalize(search);
+      const items=VOCAB.filter(w=>(libraryCategory==='全部主題'||w.category===libraryCategory)&&(!q||normalize(w.term).includes(q)||w.meaning.includes(search.trim())||normalize(w.example).includes(q)));
+      app.innerHTML=`<div class="section-head"><div><h2>100 個實用英文單字與片語</h2><p>10 個生活主題 · 點選喇叭就能聽英文發音</p></div><span class="chip">📚 完整學習清單</span></div><div class="library-tools"><input id="library-search" class="search-input" placeholder="搜尋英文、中文或例句..." value="${safe(search)}" aria-label="搜尋單字"/><select id="library-category" class="select" aria-label="單字庫主題">${categoryOptions(libraryCategory)}</select><button class="secondary" type="button" data-action="export">↓ 匯出 CSV</button></div><div class="library-count">顯示 ${items.length} / 100 個單字與片語</div><div class="card library-list">${items.length?items.map(w=>{
+        const modes=mastered.get(w.id);const status=modes?.size===2?'<span class="tag green">雙項掌握</span>':weak.has(w.id)?'<span class="tag red">待複習</span>':modes?.size?'<span class="tag blue">練習中</span>':'';
+        return `<div class="vocab-row"><div class="number-pill">${String(w.id).padStart(2,'0')}</div><div><div class="vocab-name">${safe(w.term)} ${status}</div><div class="vocab-desc">${safe(w.meaning)} · ${safe(w.category)}</div><div class="vocab-example">${safe(w.example)}</div></div><div class="vocab-actions"><button class="icon-btn" data-say="${w.id}" title="播放 ${safe(w.term)}" aria-label="播放 ${safe(w.term)}">${tinySound}</button><button class="small-btn" data-practice="${w.id}">練這題 →</button></div></div>`;
+      }).join(''):`<div class="empty">找不到符合條件的單字，試試其他搜尋詞。</div>`}</div>`;
+    }
+    function localDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+    function renderReport(){
+      const s=computeStats();const today=new Date();const days=Array.from({length:7},(_,i)=>{const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()-6+i);return {day:localDate(d),label:`${d.getMonth()+1}/${d.getDate()}`,count:0};});
+      const counter=new Map(days.map(d=>[d.day,d]));for(const r of records){const d=localDate(new Date(r.at));if(counter.has(d))counter.get(d).count++;}
+      const max=Math.max(...days.map(d=>d.count),1);
+      const weak=getWeakIds();const weakItems=VOCAB.filter(w=>weak.has(w.id)).map(w=>({...w,misses:records.filter(r=>r.wordId===w.id&&!r.correct).length})).sort((a,b)=>b.misses-a.misses).slice(0,6);
+      app.innerHTML=`<div class="section-head"><div><h2>我的學習報告</h2><p>答題與錯題統計儲存在這個瀏覽器，不需登入</p></div><span class="chip">📊 即時更新</span></div><div class="report-grid"><div class="stat-card"><div class="stat-label">累積作答</div><div class="stat-number">${s.total}</div><div class="stat-desc">聽力與口說總練習次數</div></div><div class="stat-card"><div class="stat-label">整體正確率</div><div class="stat-number">${s.accuracy}%</div><div class="stat-desc">共答對 ${s.correct} 道題目</div></div><div class="stat-card"><div class="stat-label">雙技能已掌握</div><div class="stat-number">${s.mastered}<span style="font-size:16px;color:#aab4c4"> / 100</span></div><div class="stat-desc">同一題聽力、口說各答對過</div></div><div class="stat-card"><div class="stat-label">最長連續答對</div><div class="stat-number">${s.maxStreak}</div><div class="stat-desc">目前連對 ${s.streak} 題</div></div></div><div class="report-row"><div class="card report-panel"><h3>最近 7 天練習量</h3><p>每日作答次數（包含跳過的題目）</p><div class="weekly" role="img" aria-label="最近七日作答次數 ${days.map(d=>d.label+'：'+d.count).join('、')}">${days.map((d,i)=>`<div class="bar-col"><div class="bar-number">${d.count||''}</div><div class="bar ${i===6?'today':''}" style="height:${Math.max(2,(d.count/max)*146)}px"></div><div class="bar-label">${d.label}</div></div>`).join('')}</div></div><div class="card report-panel"><h3>不同技能的答對率</h3><p>依作答次數計算；尚未作答時顯示 0%</p><div class="performance"><div class="performance-item"><div class="performance-header"><span>🎧 聽音辨識</span><span>${s.listenAccuracy}% · ${s.listen} 題</span></div><div class="performance-track"><div class="performance-fill" style="width:${s.listenAccuracy}%"></div></div></div><div class="performance-item"><div class="performance-header"><span>🎤 開口朗讀</span><span>${s.speakAccuracy}% · ${s.speak} 題</span></div><div class="performance-track"><div class="performance-fill green" style="width:${s.speakAccuracy}%"></div></div></div></div><div class="hint-box" style="margin-top:29px"><strong>🏁 進度觀察</strong><p>已經至少答對一次的單字：${s.learned}/100。最近一筆作答失敗的單字：${s.weak} 個，可到「錯題複習」加強。</p></div></div></div><div class="report-row"><div class="card report-panel"><h3>最需要複習的單字</h3><p>依答錯次數排序；同一單字最近一次答對即退出錯題清單</p>${weakItems.length?`<ul class="weak-list">${weakItems.map(w=>`<li><div><strong>${safe(w.term)}</strong><span>${safe(w.meaning)} · ${safe(w.category)}</span></div><span class="tag red">答錯 ${w.misses} 次</span></li>`).join('')}</ul><button type="button" class="primary" data-mode="review" style="margin-top:19px">開始錯題複習 →</button>`:'<div class="empty">🎉 目前沒有待複習的單字。繼續維持！</div>'}</div><div class="card report-panel"><h3>我的練習資料</h3><p>所有統計僅保存於目前瀏覽器的 localStorage</p><div class="mini-stat"><span>學習主題</span><strong>10 類</strong></div><div class="mini-stat"><span>完整單字表</span><strong>100 個</strong></div><div class="mini-stat"><span>已答對的不同單字</span><strong>${s.learned} 個</strong></div><div class="mini-stat"><span>尚待複習</span><strong>${s.weak} 個</strong></div><div style="margin-top:23px;display:flex;gap:9px;flex-wrap:wrap"><button class="secondary" data-action="export" type="button">↓ 匯出單字清單</button><button class="secondary" data-action="reset" type="button" style="color:#c65b65">清除學習紀錄</button></div></div></div>`;
+    }
+    function speak(word){
+      if(!('speechSynthesis' in window)){alert('此瀏覽器不支援語音播放。請使用最新版 Chrome 或 Edge。');return;}
+      window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(word);u.lang='en-US';u.rate=speechRate;u.pitch=1;
+      const voices=window.speechSynthesis.getVoices();const voice=voices.find(v=>v.lang.toLowerCase()==='en-us'&&/google|microsoft|natural|samantha/i.test(v.name))||voices.find(v=>v.lang.toLowerCase()==='en-us')||voices.find(v=>v.lang.toLowerCase().startsWith('en'));
+      if(voice)u.voice=voice;window.speechSynthesis.speak(u);
+    }
+    function recordAnswer(correct,response,skipped=false){
+      if(answered||!currentWord())return;
+      const w=currentWord(),real=actualMode();
+      const result={wordId:w.id,mode:real,correct:Boolean(correct),at:Date.now(),hint:hintShown,skipped};
+      records.push(result);save();answered=true;recording=false;microphoneError='';
+      lastFeedback={correct:Boolean(correct),response,skipped};
+      if(!window.sessionResults)window.sessionResults=[];
+      window.sessionResults.push({correct:Boolean(correct)});
+      renderPractice();
+    }
+    function next(){index++;answered=false;hintShown=false;lastFeedback=null;microphoneError='';renderPractice();}
+    function resetSession(firstId){window.sessionResults=[];makeQueue(firstId);render();}
+    function levenshtein(a,b){const prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let d=i;for(let j=1;j<=b.length;j++){const next=Math.min(prev[j]+1,d+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev[j-1]=d;d=next;}prev[b.length]=d;}return prev[b.length];}
+    function startRecognition(){
+      if(recording){if(rec){try{rec.stop();}catch(_){}}return;}
+      if(!micSupported||!currentWord()||answered)return;
+      if(window.isSecureContext===false){microphoneError='麥克風需要 HTTPS 或 localhost 才能使用。請將此頁部署到 GitHub Pages，或以 localhost 開啟。';renderPractice();return;}
+      const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+      let recognized=false;
+      try{
+        rec=new Recognition();rec.lang='en-US';rec.interimResults=false;rec.continuous=false;rec.maxAlternatives=5;
+        rec.onresult=e=>{
+          recognized=true;
+          const list=Array.from(e.results[0]).map(a=>a.transcript);
+          const goal=normalize(currentWord().term);
+          const exact=list.find(s=>normalize(s)===goal);
+          const guess=exact||list.slice().sort((a,b)=>levenshtein(normalize(a),goal)-levenshtein(normalize(b),goal))[0]||'';
+          recordAnswer(Boolean(exact),guess);
+        };
+        rec.onerror=e=>{recording=false;microphoneError=({ 'not-allowed':'無法使用麥克風：請允許瀏覽器的麥克風權限。','service-not-allowed':'語音辨識服務無法使用，請確認瀏覽器設定。','no-speech':'沒有偵測到語音，請再試一次。','audio-capture':'找不到可用的麥克風裝置。','network':'語音辨識網路服務無法連線。' })[e.error]||`語音辨識失敗（${e.error}），請重試。`;renderPractice();};
+        rec.onend=()=>{if(recording){recording=false;if(!recognized)microphoneError='尚未收到辨識結果，請再念一次。';renderPractice();}};
+        recording=true;microphoneError='';rec.start();renderPractice();
+      }catch(e){recording=false;microphoneError='無法啟動語音辨識，請確認麥克風權限及瀏覽器設定。';renderPractice();}
+    }
+    function exportCSV(){
+      const rows=[['編號','分類','英文單字／片語','中文意思','英文例句'],...VOCAB.map(w=>[w.id,w.category,w.term,w.meaning,w.example])];
+      const quote=s=>'"'+String(s).replace(/"/g,'""')+'"';
+      const csv='\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n');
+      const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+      const a=document.createElement('a');a.href=url;a.download='EchoWords_100_英文學習清單.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    document.addEventListener('click',e=>{
+      const button=e.target.closest('button');if(!button)return;
+      if(button.dataset.view){view=button.dataset.view;render();return;}
+      if(button.dataset.mode){mode=button.dataset.mode;if(mode==='review')category='全部主題';view='practice';resetSession();return;}
+      if(button.dataset.say){const w=VOCAB.find(w=>w.id===Number(button.dataset.say));if(w)speak(w.term);return;}
+      if(button.dataset.practice){mode='listen';category='全部主題';view='practice';resetSession(Number(button.dataset.practice));return;}
+      const action=button.dataset.action;
+      if(action==='play-current'&&currentWord())speak(currentWord().term);
+      else if(action==='hint'){hintShown=true;renderPractice();}
+      else if(action==='record')startRecognition();
+      else if(action==='skip')recordAnswer(false,'',true);
+      else if(action==='next')next();
+      else if(action==='restart')resetSession();
+      else if(action==='export')exportCSV();
+      else if(action==='reset'&&window.confirm('確定刪除這台裝置上所有英文練習紀錄嗎？這個操作無法復原。')){records=[];save();resetSession();}
+    });
+    app.addEventListener('submit',e=>{
+      if(e.target.id!=='answer-form')return;
+      e.preventDefault();const answer=$('#answer-input')?.value.trim();if(!answer)return;
+      recordAnswer(normalize(answer)===normalize(currentWord().term),answer);
+    });
+    app.addEventListener('change',e=>{
+      if(e.target.id==='practice-category'){category=e.target.value;resetSession();}
+      if(e.target.id==='library-category'){libraryCategory=e.target.value;renderLibrary();}
+    });
+    app.addEventListener('input',e=>{
+      if(e.target.id==='library-search'){
+        search=e.target.value;const cursor=e.target.selectionStart;renderLibrary();const inp=$('#library-search');if(inp){inp.focus();inp.setSelectionRange(cursor,cursor);}
+      }
+    });
+    // 用單字資料完整性檢查避免日後編輯時不小心增減數量。
+    console.assert(VOCAB.length===100,'單字清單必須為 100 個');
+    resetSession();
+  </script>
+</body>
+</html>
