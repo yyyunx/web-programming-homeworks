@@ -33,8 +33,9 @@ docs/source-history.json
 ```
 
 ```sh
-python3 -m http.server 8000
-# 開啟 http://localhost:8000/
+python3 scripts/build_site.py
+python3 -m http.server 8000 --directory _site
+# 開啟 http://localhost:8000/（建置需網路以取得官方 AQI）
 ```
 
 ## Git 歷史與來源保護
@@ -55,7 +56,11 @@ python3 -m http.server 8000
 
 ## GitHub Pages 部署
 
-使用 GitHub Pages **Deploy from a branch**：`main` 分支的 `/ (root)`，保留 `.nojekyll`。每次推送到 `main` 後，GitHub 自動執行 Pages 建置及部署。站內 Demo 連結皆為相對路徑，可在專案 Pages 子目錄執行。
+使用 **GitHub Actions**（Settings → Pages → Source: GitHub Actions），工作流程為 [pages.yml](.github/workflows/pages.yml)。推送 `main`、手動執行及每小時第 17 分會觸發部署。建置程式只複製首頁與七個作業到 `_site`，並從環境部官方資料集的公開預覽端點取得 AQI，產生同網域 `real-time-aqi-map/data/aqi.json`，不需要 API key。
+
+原作 AQI key 已失效；改在建置時擷取資料，避免官方 CORS 限制，地圖與篩選介面保留。每個小時的排程可能被 GitHub 延遲；頁面顯示來源、完整資料時間與超過 3 小時的警示。重新整理按鈕重新讀取最近部署的資料快照，無法使上游資料提早更新。若官方來源擷取失敗，workflow 會失敗並保留上次成功的網站，不會部署示範資料冒充即時資料。
+
+站內 Demo 與資料檔使用相對路徑，可在專案 Pages 子目錄執行。保留 `.nojekyll`。
 
 ## 瀏覽器功能與資料
 

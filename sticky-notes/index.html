@@ -198,7 +198,7 @@
         // Application State
         let notes = [];
         let selectedColor = 'yellow';
-        let layoutMode = 'free'; // 'free' or 'grid'
+        let layoutMode = window.matchMedia('(max-width: 639px)').matches ? 'grid' : 'free'; // 'free' or 'grid'
         let maxZIndex = 10;
 
         // DOM Elements
@@ -221,6 +221,8 @@
                 layoutMode = savedMode;
                 updateLayoutUI();
             }
+
+            updateLayoutUI();
 
             if (savedNotes) {
                 try {
@@ -376,7 +378,7 @@
                 id: generateId(),
                 content: '',
                 color: selectedColor,
-                x: Math.min(basePos + randomOffsetX, containerWidth - 260),
+                x: Math.max(0, Math.min(basePos + randomOffsetX, notesBoard.clientWidth - 256)),
                 y: basePos + randomOffsetY,
                 zIndex: maxZIndex,
                 createdAt: new Date().toISOString()
@@ -417,7 +419,7 @@
             wrapper.className = `sticky-note-wrapper ${layoutMode === 'free' ? 'absolute' : 'relative'}`;
             
             if (layoutMode === 'free') {
-                wrapper.style.left = `${note.x || 20}px`;
+                wrapper.style.left = `${Math.max(0, Math.min(note.x ?? 20, notesBoard.clientWidth - 256))}px`;
                 wrapper.style.top = `${note.y || 20}px`;
                 wrapper.style.zIndex = note.zIndex || 1;
             } else {

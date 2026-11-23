@@ -139,7 +139,7 @@
                     <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
                         台灣空氣品質 AQI
                     </h1>
-                    <p class="text-xs text-slate-400">OpenStreetMap 即時圖磚地圖</p>
+                    <p class="text-xs text-slate-400">OpenStreetMap 即時圖磚地圖</p><p id="data-source-status" class="text-xs text-slate-500 mt-1" role="status">正在讀取官方資料快照…</p>
                 </div>
             </div>
             <button id="refresh-btn" title="重新載入資料" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition active:scale-95">
@@ -299,8 +299,9 @@
         let currentTileLayerIndex = 0;
         let activeTileLayer = null;
 
-        // Direct MOENV Open API standard endpoint
-        const API_URL = 'https://data.moenv.gov.tw/api/v2/aqx_p_432?api_key=e8dd42e6-9b8b-43f8-991e-b3dee723a582&limit=1000&format=JSON';
+        // Same-origin official MOENV snapshot, refreshed hourly by GitHub Actions.
+        const API_URL = './data/aqi.json';
+        let aqiSource = 'loading';
 
         // Reliable fallback dataset covering key Taiwan stations
         const FALLBACK_STATIONS = [
@@ -383,23 +384,41 @@
             if (refreshBtn) refreshBtn.querySelector('i').classList.add('fa-spin');
 
             try {
-                const response = await fetch(API_URL);
+                const response = await fetch(API_URL, { cache: 'no-store', signal: AbortSignal.timeout(12000) });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
                 if (data && data.records && data.records.length > 0) {
                     stationData = normalizeRecords(data.records);
-                    showToast('即時環境部 AQI 資料更新成功');
+                    if (!stationData.length) throw new Error('沒有有效的測站座標');
+                    aqiSource = 'official';
+                    showToast('環境部 AQI 資料快照已載入');
                 } else {
                     throw new Error("API records empty");
                 }
             } catch (err) {
                 console.warn('API fetch constrained by network/CORS, utilizing comprehensive fallback dataset:', err);
                 stationData = normalizeRecords(FALLBACK_STATIONS);
-                showToast('已載入 OpenStreetMap 備用測站資料');
+                aqiSource = 'demo';
+                showToast('官方資料暫時無法讀取，顯示示範資料（非即時）');
             } finally {
                 if (refreshBtn) refreshBtn.querySelector('i').classList.remove('fa-spin');
                 renderDashboard();
+                updateSourceStatus();
             }
+        }
+
+        function updateSourceStatus() {
+            const status = document.getElementById('data-source-status');
+            if (aqiSource !== 'official') {
+                status.textContent = '示範資料（非即時）｜官方資料檔無法載入；請勿用作健康決策。';
+                status.className = 'text-xs text-amber-300 mt-1';
+                return;
+            }
+            const published = stationData.map(s => s.publishtime).sort().at(-1);
+            const parsed = Date.parse(published.replaceAll('/', '-').replace(' ', 'T') + '+08:00');
+            const stale = !Number.isFinite(parsed) || Date.now() - parsed > 3 * 60 * 60 * 1000;
+            status.textContent = `環境部官方資料快照｜${published}（臺北時間）｜每小時更新${stale ? '，目前資料已超過 3 小時' : ''}`;
+            status.className = `text-xs mt-1 ${stale ? 'text-amber-300' : 'text-emerald-300'}`;
         }
 
         // Standardize keys safely
@@ -407,10 +426,10 @@
             return records.map(r => ({
                 sitename: r.sitename || r.SiteName || "未知測站",
                 county: r.county || r.County || "",
-                aqi: r.aqi || r.AQI || "-",
+                aqi: r.aqi ?? r.AQI ?? "-",
                 status: r.status || r.Status || "未知",
                 pollutant: r.pollutant || r.Pollutant || "",
-                pm25: r.pm25 || r["pm2.5"] || r["pm2.5_avg"] || r.PM25 || "-",
+                pm25: r.pm25 ?? r["pm2.5"] ?? r["pm2.5_avg"] ?? r.PM25 ?? "-",
                 pm10: r.pm10 || r.PM10 || "-",
                 o3: r.o3 || r.O3 || "-",
                 co: r.co || r.CO || "-",
