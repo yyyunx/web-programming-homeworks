@@ -197,6 +197,7 @@ async function clean(p, name) {
           assert.ok(dimensions.scroll <= width + 1, `${name} has horizontal overflow ${dimensions.scroll}`);
           if (name === 'cow-game') { await p.getByRole('button', { name: '開始吃草！' }).tap(); await p.locator('.dpad-btn[onclick*="ArrowRight"]').tap(); assert.ok(await p.evaluate(() => inputQueue.length > 0 || direction.x !== 0)); }
           if (name === 'sticky-notes') { assert.match(await p.locator('#notesBoard').getAttribute('class'), /grid/); await p.locator('#addNoteBtn').tap(); await p.locator('textarea').last().fill('Mobile note'); }
+          await p.evaluate(() => window.scrollTo(0, 0));
           await p.screenshot({ path: path.join(out, `${name || 'home'}-mobile-${width}.png`), fullPage: true });
           await clean(p, `${name || 'home'}-mobile-${width}`); await p.close();
         }
