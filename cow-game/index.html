@@ -58,7 +58,11 @@
       box-shadow: 0 12px 28px rgba(0,0,0,0.6);
     }
 
+    .game-container { width: min(412px, 100%); }
+
     canvas {
+      width: 100%;
+      height: auto;
       display: block;
       background: var(--board-bg);
     }
@@ -349,7 +353,8 @@
     }
 
     window.addEventListener('keydown', e => {
-      if (e.code === 'Space') { togglePause(); return; }
+      if (e.code === 'Space') { e.preventDefault(); togglePause(); return; }
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
       handleInput(e.key);
     });
 

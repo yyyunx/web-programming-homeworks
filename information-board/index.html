@@ -268,7 +268,7 @@
         };
 
         // Fallback Vector SVG Placeholders
-        const SVG_FALLBACK_DOG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200" fill="none"><rect width="300" height="200" fill="%230f172a"/><path d="M150 70c-16.5 0-30 13.5-30 30 0 22 30 50 30 50s30-28 30-50c0-16.5-13.5-30-30-30z" fill="%23334155"/><circle cx="125" cy="85" r="8" fill="%23475569"/><circle cx="175" cy="85" r="8" fill="%23475569"/><text x="150" y="165" font-family="sans-serif" font-size="12" fill="%2364748b" text-anchor="middle">無相片或載入失敗</text></svg>`;
+        const SVG_FALLBACK_DOG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200" fill="none"><rect width="300" height="200" fill="%230f172a"/><path d="M150 70c-16.5 0-30 13.5-30 30 0 22 30 50 30 50s30-28 30-50c0-16.5-13.5-30-30-30z" fill="%23334155"/><circle cx="125" cy="85" r="8" fill="%23475569"/><circle cx="175" cy="85" r="8" fill="%23475569"/><text x="150" y="165" font-family="sans-serif" font-size="12" fill="%2364748b" text-anchor="middle">無相片或載入失敗</text></svg>`.replace(/"/g, "%22");
 
         /**
          * High quality Mock Datasets for graceful fallback when APIs fail
@@ -551,7 +551,7 @@
                 container.innerHTML = `
                     <div class="bg-slate-900/50 border border-dashed border-slate-800 rounded-xl p-8 text-center space-y-3">
                         <i class="fa-solid fa-basket-shopping text-3xl text-slate-600"></i>
-                        <p class="text-sm text-slate-400">目前 ${targetMonth} 月份未查獲符合「${searchKeyword}」之農產資料</p>
+                        <p class="text-sm text-slate-400">目前 ${targetMonth} 月份未查獲符合「${escapeHtml(searchKeyword)}」之農產資料</p>
                         <button onclick="document.getElementById('produce-search').value=''; renderProduceSection();" class="text-xs text-agri-400 hover:underline">清除搜尋關鍵字</button>
                     </div>
                 `;
