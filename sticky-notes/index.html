@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>便利貼看板 Sticky Notes Board</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font: Caveat for realistic sticky note look & Inter for modern UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f3f4f6;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .handwriting {
+            font-family: 'Caveat', 'Noto Sans TC', cursive;
+        }
+
+        /* Custom Scrollbar for notes */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Sticky note shadow & peel effect */
+        .sticky-note {
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .sticky-note:hover {
+            box-shadow: 5px 12px 20px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.08);
+        }
+        .sticky-note.dragging {
+            opacity: 0.85;
+            transform: scale(1.03) rotate(2deg) !important;
+            box-shadow: 10px 20px 30px rgba(0,0,0,0.2) !important;
+            cursor: grabbing;
+            z-index: 9999 !important;
+        }
+
+        /* Note Tape visual effect */
+        .sticky-tape {
+            background-color: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            backdrop-filter: blur(1px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-gray-800 antialiased selection:bg-amber-200">
+
+    <!-- Top Header / Toolbar -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-400 text-white p-2.5 rounded-xl shadow-md rotate-[-3deg]">
+                    <i class="fa-solid fa-sticky-note text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                        便利貼看板
+                    </h1>
+                    <p class="text-xs text-gray-500 hidden sm:block">輕鬆記錄、靈感不漏接</p>
+                </div>
+            </div>
+
+            <!-- Color Selector & Add Button -->
+            <div class="flex items-center space-x-2 bg-gray-100 p-1.5 rounded-2xl border border-gray-200">
+                <span class="text-xs text-gray-500 font-medium px-2 hidden md:inline">顏色:</span>
+                <div class="flex items-center space-x-1.5" id="colorPickerContainer">
+                    <!-- Color Buttons will be injected here dynamically or static -->
+                    <button data-color="yellow" class="color-btn w-7 h-7 rounded-full bg-amber-200 border-2 border-amber-400 focus:outline-none transition-transform hover:scale-110 active:scale-95 ring-2 ring-offset-1 ring-amber-400" title="黃色"></button>
+                    <button data-color="green" class="color-btn w-7 h-7 rounded-full bg-emerald-200 border-2 border-emerald-300 focus:outline-none transition-transform hover:scale-110 active:scale-95" title="綠色"></button>
+                    <button data-color="blue" class="color-btn w-7 h-7 rounded-full bg-sky-200 border-2 border-sky-300 focus:outline-none transition-transform hover:scale-110 active:scale-95" title="藍色"></button>
+                    <button data-color="pink" class="color-btn w-7 h-7 rounded-full bg-rose-200 border-2 border-rose-300 focus:outline-none transition-transform hover:scale-110 active:scale-95" title="粉紅"></button>
+                    <button data-color="purple" class="color-btn w-7 h-7 rounded-full bg-purple-200 border-2 border-purple-300 focus:outline-none transition-transform hover:scale-110 active:scale-95" title="紫色"></button>
+                </div>
+                <div class="h-5 w-[1px] bg-gray-300 mx-1"></div>
+                <button id="addNoteBtn" class="flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-1.5 rounded-xl transition shadow-sm hover:shadow active:scale-95">
+                    <i class="fa-solid fa-plus text-sm"></i>
+                    <span class="text-sm">新增便利貼</span>
+                </button>
+            </div>
+
+            <!-- Right Controls: View Mode & Search -->
+            <div class="flex items-center space-x-2 w-full md:w-auto justify-between md:justify-end">
+                <!-- Search Bar -->
+                <div class="relative flex-1 md:w-48">
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="searchInput" placeholder="搜尋便利貼..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-50 focus:bg-white rounded-xl border border-gray-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition">
+                </div>
+
+                <!-- View Layout Switcher -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs">
+                    <button id="gridModeBtn" class="px-2.5 py-1 rounded-lg font-medium transition text-gray-600 hover:text-gray-900" title="網格瀑布流">
+                        <i class="fa-solid fa-grip-vertical"></i>
+                    </button>
+                    <button id="freeModeBtn" class="px-2.5 py-1 rounded-lg font-medium transition bg-white shadow-sm text-amber-600" title="自由拖拽">
+                        <i class="fa-solid fa-hand"></i>
+                    </button>
+                </div>
+
+                <!-- Action Menu (Clear All) -->
+                <button id="clearAllBtn" class="p-2 text-gray-400 hover:text-rose-500 transition rounded-xl hover:bg-rose-50" title="清空所有便利貼">
+                    <i class="fa-regular fa-trash-can text-base"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Board Area -->
+    <main class="flex-1 relative w-full overflow-hidden p-4 md:p-6 min-h-[calc(100vh-80px)]" id="boardContainer">
+        <!-- Empty State Prompt -->
+        <div id="emptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none select-none z-0">
+            <div class="w-24 h-24 mb-4 rounded-full bg-amber-50 flex items-center justify-center border-2 border-dashed border-amber-200 text-amber-300">
+                <i class="fa-regular fa-note-sticky text-4xl"></i>
+            </div>
+            <p class="text-lg font-medium text-gray-500">目前沒有任何便利貼</p>
+            <p class="text-xs text-gray-400 mt-1">點擊上方「新增便利貼」開始記錄吧！</p>
+        </div>
+
+        <!-- Sticky Notes Canvas/Grid Wrapper -->
+        <div id="notesBoard" class="w-full h-full relative min-h-[700px]">
+            <!-- Dynamic Sticky Notes will be added here -->
+        </div>
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-gray-800 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">操作成功</span>
+    </div>
+
+    <script>
+        // Color Definitions Configuration
+        const COLOR_SCHEMES = {
+            yellow: {
+                bg: 'bg-amber-100',
+                header: 'bg-amber-200/60',
+                border: 'border-amber-300',
+                text: 'text-amber-900',
+                accent: 'bg-amber-400',
+                ring: 'ring-amber-400'
+            },
+            green: {
+                bg: 'bg-emerald-100',
+                header: 'bg-emerald-200/60',
+                border: 'border-emerald-300',
+                text: 'text-emerald-900',
+                accent: 'bg-emerald-400',
+                ring: 'ring-emerald-400'
+            },
+            blue: {
+                bg: 'bg-sky-100',
+                header: 'bg-sky-200/60',
+                border: 'border-sky-300',
+                text: 'text-sky-900',
+                accent: 'bg-sky-400',
+                ring: 'ring-sky-400'
+            },
+            pink: {
+                bg: 'bg-rose-100',
+                header: 'bg-rose-200/60',
+                border: 'border-rose-300',
+                text: 'text-rose-900',
+                accent: 'bg-rose-400',
+                ring: 'ring-rose-400'
+            },
+            purple: {
+                bg: 'bg-purple-100',
+                header: 'bg-purple-200/60',
+                border: 'border-purple-300',
+                text: 'text-purple-900',
+                accent: 'bg-purple-400',
+                ring: 'ring-purple-400'
+            }
+        };
+
+        // Application State
+        let notes = [];
+        let selectedColor = 'yellow';
+        let layoutMode = 'free'; // 'free' or 'grid'
+        let maxZIndex = 10;
+
+        // DOM Elements
+        const notesBoard = document.getElementById('notesBoard');
+        const emptyState = document.getElementById('emptyState');
+        const addNoteBtn = document.getElementById('addNoteBtn');
+        const colorBtns = document.querySelectorAll('.color-btn');
+        const freeModeBtn = document.getElementById('freeModeBtn');
+        const gridModeBtn = document.getElementById('gridModeBtn');
+        const searchInput = document.getElementById('searchInput');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const boardContainer = document.getElementById('boardContainer');
+
+        // Load data from LocalStorage
+        function initApp() {
+            const savedNotes = localStorage.getItem('sticky_notes_data');
+            const savedMode = localStorage.getItem('sticky_notes_layout');
+            
+            if (savedMode) {
+                layoutMode = savedMode;
+                updateLayoutUI();
+            }
+
+            if (savedNotes) {
+                try {
+                    notes = JSON.parse(savedNotes);
+                    // Find highest z-index
+                    notes.forEach(note => {
+                        if (note.zIndex && note.zIndex > maxZIndex) {
+                            maxZIndex = note.zIndex;
+                        }
+                    });
+                } catch (e) {
+                    console.error('解析 LocalStorage 資料失敗:', e);
+                    notes = [];
+                }
+            } else {
+                // Default initial welcome notes if first time
+                notes = [
+                    {
+                        id: generateId(),
+                        content: '歡迎使用便利貼看板！✨\n\n• 點擊文字即可直接編輯\n• 按住頂部膠帶可自由拖拽移動\n• 點擊右上角 color 點可切換顏色',
+                        color: 'yellow',
+                        x: 40,
+                        y: 40,
+                        zIndex: 1,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: generateId(),
+                        content: '💡 提示：\n點擊右上角的 [網格/自由] 按鈕可以切換排列方式喔！所有的變動都會自動儲存。',
+                        color: 'pink',
+                        x: 320,
+                        y: 80,
+                        zIndex: 2,
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                saveNotesToStorage();
+            }
+
+            renderNotes();
+            setupEventListeners();
+        }
+
+        // Save current notes to LocalStorage
+        function saveNotesToStorage() {
+            localStorage.setItem('sticky_notes_data', JSON.stringify(notes));
+            localStorage.setItem('sticky_notes_layout', layoutMode);
+            checkEmptyState();
+        }
+
+        function generateId() {
+            return 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function checkEmptyState() {
+            const visibleNotes = notesBoard.querySelectorAll('.sticky-note-wrapper:not(.hidden)');
+            if (visibleNotes.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        }
+
+        function setupEventListeners() {
+            // Color Selector Buttons
+            colorBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    colorBtns.forEach(b => b.classList.remove('ring-2', 'ring-offset-1', b.dataset.ringClass));
+                    selectedColor = btn.dataset.color;
+                    btn.classList.add('ring-2', 'ring-offset-1');
+                });
+            });
+
+            // Add Note Button
+            addNoteBtn.addEventListener('click', () => {
+                addNewNote();
+            });
+
+            // Layout Mode Toggles
+            freeModeBtn.addEventListener('click', () => {
+                layoutMode = 'free';
+                updateLayoutUI();
+                saveNotesToStorage();
+                renderNotes();
+            });
+
+            gridModeBtn.addEventListener('click', () => {
+                layoutMode = 'grid';
+                updateLayoutUI();
+                saveNotesToStorage();
+                renderNotes();
+            });
+
+            // Search Filter Input
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                const wrappers = notesBoard.querySelectorAll('.sticky-note-wrapper');
+                
+                wrappers.forEach(wrapper => {
+                    const id = wrapper.dataset.id;
+                    const note = notes.find(n => n.id === id);
+                    if (note && note.content.toLowerCase().includes(query)) {
+                        wrapper.classList.remove('hidden');
+                    } else {
+                        wrapper.classList.add('hidden');
+                    }
+                });
+                checkEmptyState();
+            });
+
+            // Clear All Button
+            clearAllBtn.addEventListener('click', () => {
+                if (notes.length === 0) return;
+                if (confirm('確定要清空所有便利貼嗎？此動作無法復原。')) {
+                    notes = [];
+                    saveNotesToStorage();
+                    renderNotes();
+                    showToast('已清空所有便利貼', 'info');
+                }
+            });
+        }
+
+        function updateLayoutUI() {
+            if (layoutMode === 'free') {
+                freeModeBtn.classList.add('bg-white', 'shadow-sm', 'text-amber-600');
+                freeModeBtn.classList.remove('text-gray-600');
+                gridModeBtn.classList.remove('bg-white', 'shadow-sm', 'text-amber-600');
+                gridModeBtn.classList.add('text-gray-600');
+
+                notesBoard.className = 'w-full h-full relative min-h-[700px]';
+            } else {
+                gridModeBtn.classList.add('bg-white', 'shadow-sm', 'text-amber-600');
+                gridModeBtn.classList.remove('text-gray-600');
+                freeModeBtn.classList.remove('bg-white', 'shadow-sm', 'text-amber-600');
+                freeModeBtn.classList.add('text-gray-600');
+
+                notesBoard.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full pb-10';
+            }
+        }
+
+        function addNewNote() {
+            maxZIndex += 1;
+            
+            // Calculate a smart default position for free mode
+            const containerWidth = boardContainer.clientWidth || 800;
+            const randomOffsetX = Math.floor(Math.random() * 60) - 30;
+            const randomOffsetY = Math.floor(Math.random() * 60) - 30;
+            
+            // Offset cascade based on count
+            const basePos = (notes.length % 6) * 30 + 50;
+
+            const newNote = {
+                id: generateId(),
+                content: '',
+                color: selectedColor,
+                x: Math.min(basePos + randomOffsetX, containerWidth - 260),
+                y: basePos + randomOffsetY,
+                zIndex: maxZIndex,
+                createdAt: new Date().toISOString()
+            };
+
+            notes.push(newNote);
+            saveNotesToStorage();
+            
+            const element = createNoteElement(newNote);
+            notesBoard.appendChild(element);
+            
+            // Focus on newly created note textarea
+            const textarea = element.querySelector('textarea');
+            if (textarea) {
+                textarea.focus();
+            }
+
+            checkEmptyState();
+            showToast('已新增便利貼');
+        }
+
+        function renderNotes() {
+            notesBoard.innerHTML = '';
+            
+            notes.forEach(note => {
+                const noteElement = createNoteElement(note);
+                notesBoard.appendChild(noteElement);
+            });
+
+            checkEmptyState();
+        }
+
+        function createNoteElement(note) {
+            const scheme = COLOR_SCHEMES[note.color] || COLOR_SCHEMES.yellow;
+            
+            const wrapper = document.createElement('div');
+            wrapper.dataset.id = note.id;
+            wrapper.className = `sticky-note-wrapper ${layoutMode === 'free' ? 'absolute' : 'relative'}`;
+            
+            if (layoutMode === 'free') {
+                wrapper.style.left = `${note.x || 20}px`;
+                wrapper.style.top = `${note.y || 20}px`;
+                wrapper.style.zIndex = note.zIndex || 1;
+            } else {
+                wrapper.style.left = 'auto';
+                wrapper.style.top = 'auto';
+                wrapper.style.zIndex = 'auto';
+            }
+
+            // HTML Structure of a Note
+            wrapper.innerHTML = `
+                <div class="sticky-note w-64 h-64 rounded-b-2xl rounded-t-sm ${scheme.bg} ${scheme.border} border flex flex-col relative group">
+                    
+                    <!-- Top Drag Handle & Tape -->
+                    <div class="note-header h-8 w-full ${scheme.header} flex items-center justify-between px-3 cursor-grab select-none rounded-t-sm border-b border-black/5">
+                        <div class="sticky-tape absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-5 rotate-[-1deg] border border-white/40 pointer-events-none"></div>
+                        <span class="text-[10px] font-semibold text-black/40 uppercase tracking-wider">${note.color}</span>
+                        
+                        <!-- Header Tools (Color switcher & Delete) -->
+                        <div class="flex items-center space-x-1.5 opacity-80 group-hover:opacity-100 transition">
+                            <!-- Color Dropdown Button -->
+                            <div class="relative group/color">
+                                <button class="w-4 h-4 rounded-full ${scheme.accent} border border-white/60 focus:outline-none" title="更換顏色"></button>
+                                <div class="hidden group-hover/color:flex absolute right-0 top-5 bg-white p-1 rounded-lg shadow-md border border-gray-100 space-x-1 z-30">
+                                    <button data-change-color="yellow" class="w-4 h-4 rounded-full bg-amber-300 hover:scale-110 transition"></button>
+                                    <button data-change-color="green" class="w-4 h-4 rounded-full bg-emerald-300 hover:scale-110 transition"></button>
+                                    <button data-change-color="blue" class="w-4 h-4 rounded-full bg-sky-300 hover:scale-110 transition"></button>
+                                    <button data-change-color="pink" class="w-4 h-4 rounded-full bg-rose-300 hover:scale-110 transition"></button>
+                                    <button data-change-color="purple" class="w-4 h-4 rounded-full bg-purple-300 hover:scale-110 transition"></button>
+                                </div>
+                            </div>
+                            
+                            <!-- Delete Button -->
+                            <button class="delete-btn text-gray-400 hover:text-rose-600 p-1 transition rounded" title="刪除">
+                                <i class="fa-solid fa-xmark text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Note Content Body (Editable Textarea) -->
+                    <div class="flex-1 p-3 flex flex-col">
+                        <textarea 
+                            placeholder="在此輸入內容..." 
+                            class="w-full h-full bg-transparent resize-none outline-none ${scheme.text} placeholder-black/30 custom-scrollbar text-base leading-relaxed"
+                        >${escapeHtml(note.content)}</textarea>
+                    </div>
+
+                    <!-- Bottom Info Footer -->
+                    <div class="px-3 py-1.5 flex justify-between items-center text-[10px] text-black/30 border-t border-black/5">
+                        <span>${formatDate(note.createdAt)}</span>
+                        <i class="fa-solid fa-pencil text-[9px] opacity-0 group-hover:opacity-100 transition"></i>
+                    </div>
+                </div>
+            `;
+
+            const textarea = wrapper.querySelector('textarea');
+            const deleteBtn = wrapper.querySelector('.delete-btn');
+            const header = wrapper.querySelector('.note-header');
+            const colorButtons = wrapper.querySelectorAll('[data-change-color]');
+
+            // Textarea Auto Save
+            textarea.addEventListener('input', (e) => {
+                note.content = e.target.value;
+                saveNotesToStorage();
+            });
+
+            // Bring to Front on Click
+            wrapper.addEventListener('mousedown', () => {
+                if (layoutMode === 'free') {
+                    maxZIndex += 1;
+                    note.zIndex = maxZIndex;
+                    wrapper.style.zIndex = maxZIndex;
+                    saveNotesToStorage();
+                }
+            });
+
+            // Change Color Action
+            colorButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const newColor = btn.dataset.changeColor;
+                    note.color = newColor;
+                    saveNotesToStorage();
+                    renderNotes(); // Refresh style
+                });
+            });
+
+            // Delete Action
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                wrapper.classList.add('scale-95', 'opacity-0', 'transition-all', 'duration-200');
+                setTimeout(() => {
+                    notes = notes.filter(n => n.id !== note.id);
+                    saveNotesToStorage();
+                    wrapper.remove();
+                    checkEmptyState();
+                    showToast('已刪除便利貼', 'info');
+                }, 200);
+            });
+
+            // Drag and Drop Logic (Free Mode only)
+            if (layoutMode === 'free') {
+                makeDraggable(wrapper, header, note);
+            }
+
+            return wrapper;
+        }
+
+        function makeDraggable(element, handle, note) {
+            let startX = 0, startY = 0;
+            let initialMouseX = 0, initialMouseY = 0;
+            let isDragging = false;
+
+            handle.addEventListener('mousedown', dragStart);
+            handle.addEventListener('touchstart', dragStart, { passive: false });
+
+            function dragStart(e) {
+                // Prevent drag if clicking color picker or delete
+                if (e.target.closest('button')) return;
+
+                isDragging = true;
+                element.querySelector('.sticky-note').classList.add('dragging');
+
+                const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+                initialMouseX = clientX;
+                initialMouseY = clientY;
+
+                startX = element.offsetLeft;
+                startY = element.offsetTop;
+
+                document.addEventListener('mousemove', dragging);
+                document.addEventListener('touchmove', dragging, { passive: false });
+                document.addEventListener('mouseup', dragEnd);
+                document.addEventListener('touchend', dragEnd);
+            }
+
+            function dragging(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+
+                const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+                const dx = clientX - initialMouseX;
+                const dy = clientY - initialMouseY;
+
+                let newX = startX + dx;
+                let newY = startY + dy;
+
+                // Boundary Checks
+                const containerRect = boardContainer.getBoundingClientRect();
+                newX = Math.max(10, Math.min(newX, containerRect.width - 270));
+                newY = Math.max(10, Math.min(newY, containerRect.height - 270));
+
+                element.style.left = `${newX}px`;
+                element.style.top = `${newY}px`;
+
+                note.x = newX;
+                note.y = newY;
+            }
+
+            function dragEnd() {
+                if (!isDragging) return;
+                isDragging = false;
+                element.querySelector('.sticky-note').classList.remove('dragging');
+
+                document.removeEventListener('mousemove', dragging);
+                document.removeEventListener('touchmove', dragging);
+                document.removeEventListener('mouseup', dragEnd);
+                document.removeEventListener('touchend', dragEnd);
+
+                saveNotesToStorage();
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return '';
+            const d = new Date(isoString);
+            return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = msg;
+
+            if (type === 'info') {
+                toastIcon.className = 'fa-solid fa-circle-info text-sky-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // Initialize App on DOM Ready
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
