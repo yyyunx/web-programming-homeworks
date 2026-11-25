@@ -1,5 +1,18 @@
 # 正式站台驗收報告
 
+## 2026-11-25：新增 Fresh Pomodoro
+
+- 原樣以未 squash 的 subtree 匯入 `yyyunx/Fresh-Pomodoro` 的 3 筆提交；加上原有 14 筆，共 17 筆來源提交的原始 SHA 與物件完整保留，原有七個作業檔案不變。
+- README 的 Demo 連結依實作難度由淺入深排序：Fresh Pomodoro → To-do List → Sticky Notes → Information Board → Cow Game → English Listening & Speaking → AQI Map → Cow Run。
+- [正式 Demo](https://yyyunx.github.io/web-programming-homeworks/fresh-pomodoro/) 與首頁八張作品卡片已在正式站驗收；首頁與八個作業 URL 全部 HTTP 200，HTML 與 Repo 檔案一致。
+- 番茄鐘的時間設定、開始／暫停／繼續／重置、工作與休息切換、完成計數、URL 設定範圍及分享連結回讀均通過。計時測試使用 Playwright 虛擬時鐘加速；分享測試驗證頁面的連結顯示備援。
+- 三種音效的 Web Audio 呼叫及 AudioContext 啟動通過；未驗證實際可聽見的音效或手機原生分享面板。此版本不使用 localStorage 保存設定或完成次數，保留原作行為。
+- 本機建置產物於 320／390px 的首頁及八個作業進行手機模擬，皆無水平溢出；番茄鐘觸控開始與重置通過。新作業正式站的完整計時流程亦已通過。
+- 八個來源 Repo 的 refs 與原有 Pages 設定皆未改動。新增整合提交的 Author／Committer 均使用 `yyyunx` 與已驗證的 GitHub noreply email，GitHub API 帳號關聯正確。
+- [本次成功部署](https://github.com/yyyunx/web-programming-homeworks/actions/runs/45554583230) · [驗收與保留歷史證據](verification/fresh-pomodoro-2026-11-25.json) · [320px 畫面](screenshots/fresh-pomodoro-mobile-320.png)
+
+## 2026-11-23：原有七份作業驗收
+
 測試時間：2026-11-23 11:14–11:15（Asia/Taipei）。
 
 測試站台：<https://yyyunx.github.io/web-programming-homeworks/>

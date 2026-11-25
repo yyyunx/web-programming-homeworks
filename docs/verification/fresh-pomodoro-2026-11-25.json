@@ -1,0 +1,310 @@
+{
+  "date": "2026-11-25",
+  "timezone": "Asia/Taipei",
+  "deployment": "https://github.com/yyyunx/web-programming-homeworks/actions/runs/45554583230",
+  "test_reports": {
+    "live-pomodoro": {
+      "base": "https://yyyunx.github.io/web-programming-homeworks/",
+      "startedAt": "2026-11-25T05:36:12.013Z",
+      "checks": [
+        {
+          "name": "Fresh Pomodoro: settings/countdown/pause/resume/reset/transitions/audio/share URL",
+          "pass": true,
+          "detail": {
+            "timer": "Playwright virtual clock",
+            "audioState": "running",
+            "audio": "Web Audio calls tested; audible playback not verified",
+            "share": "page fallback link"
+          }
+        }
+      ],
+      "observations": {
+        "fresh-pomodoro": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        }
+      },
+      "issues": [],
+      "finishedAt": "2026-11-25T05:36:16.284Z"
+    },
+    "live-home": {
+      "base": "https://yyyunx.github.io/web-programming-homeworks/",
+      "startedAt": "2026-11-25T05:36:09.720Z",
+      "checks": [
+        {
+          "name": "Homepage: eight independent project links",
+          "pass": true
+        }
+      ],
+      "observations": {
+        "home": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        }
+      },
+      "issues": [],
+      "finishedAt": "2026-11-25T05:36:13.738Z"
+    },
+    "local-mobile": {
+      "base": "http://localhost:8765/web-programming-homeworks/_site/",
+      "startedAt": "2026-11-25T05:34:33.386Z",
+      "checks": [
+        {
+          "name": "Responsive layouts and touch controls: 390px",
+          "pass": true
+        },
+        {
+          "name": "Responsive layouts and touch controls: 320px",
+          "pass": true
+        }
+      ],
+      "observations": {
+        "home-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "cow-game-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "cow-run-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "to-do-list-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "sticky-notes-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "information-board-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "real-time-aqi-map-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "english-listening-speaking-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "fresh-pomodoro-mobile-390": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "home-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "cow-game-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "cow-run-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "to-do-list-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "sticky-notes-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "information-board-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "real-time-aqi-map-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "english-listening-speaking-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        },
+        "fresh-pomodoro-mobile-320": {
+          "errors": [],
+          "failed": [],
+          "http": []
+        }
+      },
+      "issues": [],
+      "finishedAt": "2026-11-25T05:35:18.014Z"
+    }
+  },
+  "live_urls": {
+    "commit": "e7800d3f3037d0f958969cbc0154a9f840f7e04a",
+    "pages": [
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/",
+        "status": 200,
+        "sha256": "f84cb826cf9967fe7cf3c8fc28b63695683bfe6ac03a60d569294ce4e5355214",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/fresh-pomodoro/",
+        "status": 200,
+        "sha256": "d85e8e5493ea9d98f33f06f999913f3780cf61391196f6ad5d35601d13656f35",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/cow-game/",
+        "status": 200,
+        "sha256": "3303cba5bf383be6fc0c95f75906a661fe1f8b07f39161477bb31b28fe73f3f2",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/cow-run/",
+        "status": 200,
+        "sha256": "a0dbe35530923194274dfb822f641c9de94830d6bf2f76e4b58b1a413b118ba8",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/to-do-list/",
+        "status": 200,
+        "sha256": "580cedf8c779381bade770cdcf9a11a1fcfd8b79ac712baae3b1bbcce33025ce",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/sticky-notes/",
+        "status": 200,
+        "sha256": "8a81a16f04cb7945f9a935bb84ed6e2b0ff98a6144fdb99979d526e2f5a66098",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/information-board/",
+        "status": 200,
+        "sha256": "a20fdbf79c56a275bfafbf5a49dc46ad2edc72cdbcda6d2b038d707896ee9314",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/real-time-aqi-map/",
+        "status": 200,
+        "sha256": "7139ccbc3ce8ef9dbfa2240b76820d7db14241ec0b85d4bb0ba12501f4be2ffa",
+        "matches_repository_file": true
+      },
+      {
+        "url": "https://yyyunx.github.io/web-programming-homeworks/english-listening-speaking/",
+        "status": 200,
+        "sha256": "5040f7ba893a1220e95a8824767cb299242dfa72b7853717b3e87b68feb36007",
+        "matches_repository_file": true
+      }
+    ]
+  },
+  "history": {
+    "baseline_ancestor": true,
+    "original_projects_unchanged": true,
+    "fresh_source_tree_identical": true,
+    "total_source_commits": 17,
+    "readme_order": [
+      "fresh-pomodoro",
+      "to-do-list",
+      "sticky-notes",
+      "information-board",
+      "cow-game",
+      "english-listening-speaking",
+      "real-time-aqi-map",
+      "cow-run"
+    ],
+    "sources": [
+      {
+        "source": "yyyunx/to-do-list",
+        "preserved_commit_count": 1,
+        "source_objects_identical": true
+      },
+      {
+        "source": "yyyunx/sticky-notes",
+        "preserved_commit_count": 1,
+        "source_objects_identical": true
+      },
+      {
+        "source": "yyyunx/cow-game",
+        "preserved_commit_count": 2,
+        "source_objects_identical": true
+      },
+      {
+        "source": "yyyunx/cow-run",
+        "preserved_commit_count": 5,
+        "source_objects_identical": true
+      },
+      {
+        "source": "yyyunx/information-board",
+        "preserved_commit_count": 1,
+        "source_objects_identical": true
+      },
+      {
+        "source": "yyyunx/Real-time-AQI-Map",
+        "preserved_commit_count": 3,
+        "source_objects_identical": true
+      },
+      {
+        "source": "yyyunx/english-listening-speaking",
+        "preserved_commit_count": 1,
+        "source_objects_identical": true
+      },
+      {
+        "source": "yyyunx/Fresh-Pomodoro",
+        "preserved_commit_count": 3,
+        "source_objects_identical": true
+      }
+    ]
+  },
+  "source_protection": [
+    {
+      "repository": "yyyunx/to-do-list",
+      "refs_and_pages_unchanged": true
+    },
+    {
+      "repository": "yyyunx/sticky-notes",
+      "refs_and_pages_unchanged": true
+    },
+    {
+      "repository": "yyyunx/cow-game",
+      "refs_and_pages_unchanged": true
+    },
+    {
+      "repository": "yyyunx/cow-run",
+      "refs_and_pages_unchanged": true
+    },
+    {
+      "repository": "yyyunx/information-board",
+      "refs_and_pages_unchanged": true
+    },
+    {
+      "repository": "yyyunx/Real-time-AQI-Map",
+      "refs_and_pages_unchanged": true
+    },
+    {
+      "repository": "yyyunx/english-listening-speaking",
+      "refs_and_pages_unchanged": true
+    },
+    {
+      "repository": "yyyunx/Fresh-Pomodoro",
+      "refs_and_pages_unchanged": true
+    }
+  ]
+}
