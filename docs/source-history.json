@@ -47,5 +47,12 @@
     "branch": "main",
     "commit": "1437d1e9f7c2ba649d04057216638cbb3dd49917",
     "commit_count": 1
+  },
+  {
+    "repository": "yyyunx/Fresh-Pomodoro",
+    "prefix": "fresh-pomodoro",
+    "branch": "main",
+    "commit": "1c50fd197d4d4643acbfe8c4c1e98300d917d647",
+    "commit_count": 3
   }
 ]

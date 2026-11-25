@@ -9,7 +9,7 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PROJECTS = ["cow-game", "cow-run", "to-do-list", "sticky-notes", "information-board",
-            "real-time-aqi-map", "english-listening-speaking"]
+            "real-time-aqi-map", "english-listening-speaking", "fresh-pomodoro"]
 SOURCE = "https://data.moenv.gov.tw/dataset/detail/AQX_P_432"
 PREVIEW = "https://data.moenv.gov.tw/api/frontstage/datastore.search"
 RESOURCE_ID = "8ff027dc-2da2-42e8-85de-78ac3faf470e"

@@ -7,7 +7,7 @@ const base = (process.env.BASE_URL || 'http://localhost:8765/web-programming-hom
 const out = path.resolve(process.env.TEST_OUTPUT || 'test-results');
 fs.mkdirSync(out, { recursive: true });
 const report = { base, startedAt: new Date().toISOString(), checks: [], observations: {}, issues: [] };
-const projects = ['cow-game', 'cow-run', 'to-do-list', 'sticky-notes', 'information-board', 'real-time-aqi-map', 'english-listening-speaking'];
+const projects = ['cow-game', 'cow-run', 'to-do-list', 'sticky-notes', 'information-board', 'real-time-aqi-map', 'english-listening-speaking', 'fresh-pomodoro'];
 let browser;
 const checks = async (name, fn) => {
   if (process.env.CHECK_FILTER && !name.includes(process.env.CHECK_FILTER)) return;
@@ -35,13 +35,65 @@ async function clean(p, name) {
   browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, args: ['--no-sandbox', '--use-fake-device-for-media-stream'] });
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
   ctx.setDefaultTimeout(15000);
-  await checks('Homepage: seven independent project links', async () => {
+  await checks('Homepage: eight independent project links', async () => {
     const p = await pageFor(ctx, '');
-    assert.equal(await p.locator('.card').count(), 7);
+    assert.equal(await p.locator('.card').count(), projects.length);
     const hrefs = await p.locator('.demo').evaluateAll(es => es.map(e => e.getAttribute('href')));
     assert.deepEqual(hrefs.map(h => h.split('/')[1]).sort(), projects.slice().sort());
     await p.screenshot({ path: path.join(out, 'home-desktop.png'), fullPage: true });
     await clean(p, 'home'); await p.close();
+  });
+  await checks('Fresh Pomodoro: settings/countdown/pause/resume/reset/transitions/audio/share URL', async () => {
+    const p = await pageFor(ctx, 'fresh-pomodoro');
+    assert.equal(await p.locator('#clock').textContent(), '25:00');
+    await p.clock.install();
+    await p.locator('#workMinutes').press('Home');
+    await p.locator('#breakMinutes').press('Home');
+    assert.equal(await p.locator('#clock').textContent(), '01:00');
+    for (const sound of ['bell', 'soft', 'digital']) {
+      await p.locator('#soundSelect').selectOption(sound);
+      await p.locator('#previewSoundBtn').click();
+      assert.ok(await p.evaluate(() => audioContext !== null));
+    }
+    const audioState = await p.evaluate(() => audioContext.state);
+    await p.locator('#soundSelect').selectOption('none');
+    await p.locator('#startPauseBtn').click();
+    await p.clock.runFor(2200);
+    assert.equal(await p.locator('#clock').textContent(), '00:58');
+    await p.locator('#startPauseBtn').click();
+    await p.clock.runFor(5000);
+    assert.equal(await p.locator('#clock').textContent(), '00:58');
+    assert.equal(await p.locator('#startPauseBtn').textContent(), '繼續');
+    await p.locator('#startPauseBtn').click();
+    await p.clock.runFor(1100);
+    assert.equal(await p.locator('#clock').textContent(), '00:57');
+    await p.locator('#resetBtn').click();
+    assert.equal(await p.locator('#clock').textContent(), '01:00');
+    await p.locator('#startPauseBtn').click();
+    await p.clock.runFor(60000);
+    assert.equal(await p.locator('#modeText').textContent(), '休息');
+    assert.equal(await p.locator('#count').textContent(), '1');
+    assert.equal(await p.locator('#clock').textContent(), '01:00');
+    await p.locator('#startPauseBtn').click();
+    await p.clock.runFor(60000);
+    assert.equal(await p.locator('#modeText').textContent(), '專注');
+    assert.equal(await p.locator('#count').textContent(), '1');
+    await p.locator('#workMinutes').press('End');
+    await p.locator('#breakMinutes').press('End');
+    assert.equal(await p.locator('#clock').textContent(), '60:00');
+    await p.locator('#shareBtn').click();
+    const shared = new URL(await p.locator('#shareBox').textContent());
+    assert.equal(shared.pathname, new URL(base + 'fresh-pomodoro/').pathname);
+    assert.equal(shared.searchParams.get('work'), '60');
+    assert.equal(shared.searchParams.get('break'), '30');
+    await p.goto(shared.toString());
+    assert.equal(await p.locator('#clock').textContent(), '60:00');
+    assert.equal(await p.locator('#breakMinutes').inputValue(), '30');
+    await p.goto(base + 'fresh-pomodoro/?work=999&break=-10');
+    assert.equal(await p.locator('#workMinutes').inputValue(), '60');
+    assert.equal(await p.locator('#breakMinutes').inputValue(), '1');
+    await clean(p, 'fresh-pomodoro'); await p.close();
+    return { timer: 'Playwright virtual clock', audioState, audio: 'Web Audio calls tested; audible playback not verified', share: 'page fallback link' };
   });
   await checks('To-do: create/edit/subtask/complete/search/export/import/delete/persistence', async () => {
     const p = await pageFor(ctx, 'to-do-list');
@@ -199,6 +251,7 @@ async function clean(p, name) {
           assert.ok(dimensions.scroll <= width + 1, `${name} has horizontal overflow ${dimensions.scroll}`);
           if (name === 'cow-game') { await p.getByRole('button', { name: '開始吃草！' }).tap(); await p.locator('.dpad-btn[onclick*="ArrowRight"]').tap(); assert.ok(await p.evaluate(() => inputQueue.length > 0 || direction.x !== 0)); }
           if (name === 'sticky-notes') { assert.match(await p.locator('#notesBoard').getAttribute('class'), /grid/); await p.locator('#addNoteBtn').tap(); await p.locator('textarea').last().fill('Mobile note'); }
+          if (name === 'fresh-pomodoro') { await p.locator('#startPauseBtn').tap(); assert.equal(await p.locator('#startPauseBtn').textContent(), '暫停'); await p.locator('#resetBtn').tap(); assert.equal(await p.locator('#clock').textContent(), '25:00'); }
           await p.evaluate(() => window.scrollTo(0, 0));
           await p.screenshot({ path: path.join(out, `${name || 'home'}-mobile-${width}.png`), fullPage: true });
           await clean(p, `${name || 'home'}-mobile-${width}`); await p.close();
