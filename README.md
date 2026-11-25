@@ -44,22 +44,9 @@ python3 -m http.server 8000 --directory _site
 # 開啟 http://localhost:8000/（建置需網路以取得官方 AQI）
 ```
 
-## Git 歷史與來源保護
+## Git 歷史
 
-八個來源的預設 `main` 分支以 **git subtree add、不使用 --squash** 匯入。所有原始提交的 SHA、作者、日期及父提交關係保留，來源歷史是整合後 `main` 的祖先。匯入基準與提交數記錄於 [source-history.json](docs/source-history.json)。原始提交在匯入前的路徑仍位於歷史根目錄；要檢視舊檔案可從對應的原始 SHA 查看。
-
-| 來源 Repository | 原始 main 提交數 |
-| --- | ---: |
-| [yyyunx/Fresh-Pomodoro](https://github.com/yyyunx/Fresh-Pomodoro) | 3 |
-| [yyyunx/to-do-list](https://github.com/yyyunx/to-do-list) | 1 |
-| [yyyunx/sticky-notes](https://github.com/yyyunx/sticky-notes) | 1 |
-| [yyyunx/information-board](https://github.com/yyyunx/information-board) | 1 |
-| [yyyunx/cow-game](https://github.com/yyyunx/cow-game) | 2 |
-| [yyyunx/english-listening-speaking](https://github.com/yyyunx/english-listening-speaking) | 1 |
-| [yyyunx/Real-time-AQI-Map](https://github.com/yyyunx/Real-time-AQI-Map) | 3 |
-| [yyyunx/cow-run](https://github.com/yyyunx/cow-run) | 5 |
-
-合計 17 筆原始提交（原有七份作業 14 筆，Fresh-Pomodoro 3 筆），另有初始化、subtree 合併與整合修正提交。來源 Repo、分支、舊 Pages 與舊網址均不變；本專案只寫入新的 `web-programming-homeworks`。
+本作品集整合八份網頁作業，完整保留 17 筆原始 Git 提交。原始提交 SHA 與匯入基準記錄於 [source-history.json](docs/source-history.json)，可在本 Repository 中查閱完整歷史。
 
 ## GitHub Pages 部署
 
