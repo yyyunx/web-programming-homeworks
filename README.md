@@ -1,6 +1,6 @@
 # 網頁程式設計課程作品集
 
-將 yyyunx 同一堂網頁程式設計課程的八份獨立作業整理在同一個公開 Repository。保留各作業原有介面、程式與功能，以入口首頁串連日常工具、互動遊戲、開放資料與語音學習。
+保留各作業原有介面、程式與功能，以入口首頁串連日常工具、互動遊戲、開放資料與語音學習。
 
 **作品集首頁：<https://yyyunx.github.io/web-programming-homeworks/>**
 
@@ -10,14 +10,14 @@
 
 | 順序 | 作品 | 功能 | 技術與實作重點 | Demo |
 | ---: | --- | --- | --- | --- |
-| 1 | Fresh Pomodoro 清新番茄鐘 | 可調專注／休息時間、暫停／繼續、重置、音效與分享設定 | 原生 HTML／CSS／JavaScript、計時器、Web Audio API、URLSearchParams | [開啟](https://yyyunx.github.io/web-programming-homeworks/fresh-pomodoro/) |
-| 2 | To-do List 待辦清單 | 任務、分類、優先級、子任務與 JSON 匯入匯出 | Tailwind CSS、localStorage、File API | [開啟](https://yyyunx.github.io/web-programming-homeworks/to-do-list/) |
-| 3 | Sticky Notes 便利貼 | 彩色便利貼、搜尋、拖曳與網格排列 | Tailwind CSS、滑鼠／觸控拖曳事件、localStorage | [開啟](https://yyyunx.github.io/web-programming-homeworks/sticky-notes/) |
-| 4 | Information Board 資訊看板 | 當季農產與狗狗認養資訊、月份與關鍵字篩選 | Fetch API、農業部開放資料、資料正規化與備援 | [開啟](https://yyyunx.github.io/web-programming-homeworks/information-board/) |
-| 5 | Cow Game 小牛吃草 | 貪食蛇式闖關、鍵盤／觸控操作與最高分 | Canvas 2D、遊戲迴圈與碰撞、Web Audio API、localStorage | [開啟](https://yyyunx.github.io/web-programming-homeworks/cow-game/) |
+| 1 | Fresh Pomodoro  | 可調專注／休息時間、暫停／繼續、重置、音效與分享設定 | 原生 HTML／CSS／JavaScript、計時器、Web Audio API、URLSearchParams | [開啟](https://yyyunx.github.io/web-programming-homeworks/fresh-pomodoro/) |
+| 2 | To-do List  | 任務、分類、優先級、子任務與 JSON 匯入匯出 | Tailwind CSS、localStorage、File API | [開啟](https://yyyunx.github.io/web-programming-homeworks/to-do-list/) |
+| 3 | Sticky Notes  | 彩色便利貼、搜尋、拖曳與網格排列 | Tailwind CSS、滑鼠／觸控拖曳事件、localStorage | [開啟](https://yyyunx.github.io/web-programming-homeworks/sticky-notes/) |
+| 4 | Information Board  | 當季農產與狗狗認養資訊、月份與關鍵字篩選 | Fetch API、農業部開放資料、資料正規化與備援 | [開啟](https://yyyunx.github.io/web-programming-homeworks/information-board/) |
+| 5 | Cow Game  | 貪食蛇式闖關、鍵盤／觸控操作與最高分 | Canvas 2D、遊戲迴圈與碰撞、Web Audio API、localStorage | [開啟](https://yyyunx.github.io/web-programming-homeworks/cow-game/) |
 | 6 | English Listening & Speaking | 100 個單字與片語、聽力、口說與學習報告 | Web Speech API、語音權限／錯誤處理、localStorage、CSV | [開啟](https://yyyunx.github.io/web-programming-homeworks/english-listening-speaking/) |
-| 7 | Real-time AQI Map 空氣品質地圖 | 測站地圖、搜尋、AQI 篩選與定位 | Leaflet、OpenStreetMap／CARTO、Geolocation、環境部資料與 Actions 快照 | [開啟](https://yyyunx.github.io/web-programming-homeworks/real-time-aqi-map/) |
-| 8 | Cow Run 小牛跑酷 | 姿勢辨識、三跑道閃避與手動控制 | TensorFlow.js、Teachable Machine Pose、MediaDevices、即時推論與遊戲迴圈 | [開啟](https://yyyunx.github.io/web-programming-homeworks/cow-run/) |
+| 7 | Real-time AQI Map  | 測站地圖、搜尋、AQI 篩選與定位 | Leaflet、OpenStreetMap／CARTO、Geolocation、環境部資料與 Actions 快照 | [開啟](https://yyyunx.github.io/web-programming-homeworks/real-time-aqi-map/) |
+| 8 | Cow Run  | 姿勢辨識、三跑道閃避與手動控制 | TensorFlow.js、Teachable Machine Pose、MediaDevices、即時推論與遊戲迴圈 | [開啟](https://yyyunx.github.io/web-programming-homeworks/cow-run/) |
 
 從番茄鐘的 DOM 操作與計時開始，依序增加資料保存、拖曳、非同步 API、Canvas 遊戲迴圈，再整合語音、地圖／定位，最後進入 AI 模型與鏡頭的即時互動。
 
